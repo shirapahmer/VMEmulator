@@ -40,6 +40,7 @@ let mutable counter = 0
 
 let handleAdd() = 
     streamWriter.WriteLine("@SP\nD=M-1\nA=D\nD=M\nA=A-1\nD=M+D\nM=D\nD=A+1\n@SP\nM=D")
+
 let handleSub() = 
     streamWriter.WriteLine("@SP\nD=M-1\nA=D\nD=M\nA=A-1\nD=M-D\nM=D\nD=A+1\n@SP\nM=D")
 
@@ -56,22 +57,22 @@ let handleOr() =
     streamWriter.WriteLine("@SP\nD=M-1\nA=D\nD=M\nA=A-1\nD=M|D\nM=D\nD=A+1\n@SP\nM=D")
 
 let handleEq() = 
-    streamWriter.WriteLine("command: eq")
-    counter <- counter + 1
-    streamWriter.WriteLine("counter: " + Convert.ToString(counter))
+    streamWriter.WriteLine("@SP\n" + "AM=M-1\n" + "D=M\n" + "@SP\n" + "AM=M-1\n" + "D=D-M\n" + "@EQUAL\n" + 
+    "D;JEQ\n" + "@NOTEQUAL\n" + "0;JMP\n" + "(EQUAL)\n" + "@LOADD\n" + "D=-1\n" + "0;JMP\n" + "(NOTEQUAL)\n" +
+    "@LOADD\n" + "D=0\n" + "0;JMP\n" + "(LOADD)\n" + "@SP\n" + "A=M\n"+"M=D\n"+"@SP\n" + "M=M+1\n")
 
 
 let handleGt() =
-    streamWriter.WriteLine("command: gt")
-    counter <- counter + 1
-    streamWriter.WriteLine("counter: " + Convert.ToString(counter))
+    streamWriter.WriteLine("@SP\n" + "AM=M-1\n" + "D=M\n" + "@SP\n" + "AM=M-1\n" + "D=M-D\n" + "@GREATERTHAN\n" + 
+    "D;JGT\n" + "@LESSTHAN\n" + "0;JMP\n" + "(GREATERTHAN)\n" + "@LOADD\n" + "D=-1\n" + "0;JMP\n" + "(LESSTHAN)\n" +
+    "@LOADD\n" + "D=0\n" + "0;JMP\n" + "(LOADD)\n" + "@SP\n" + "A=M\n"+"M=D\n"+"@SP\n" + "M=M+1\n")
 
 let handleLt() = 
-    streamWriter.WriteLine("command: lt") 
-    counter <- counter + 1
-    streamWriter.WriteLine("counter: " + Convert.ToString(counter))
+    streamWriter.WriteLine("@SP\n" + "AM=M-1\n" + "D=M\n" + "@SP\n" + "AM=M-1\n" + "D=D-M\n" + "@GREATERTHAN\n" + 
+    "D;JGT\n" + "@LESSTHAN\n" + "0;JMP\n" + "(GREATERTHAN)\n" + "@LOADD\n" + "D=-1\n" + "0;JMP\n" + "(LESSTHAN)\n" +
+    "@LOADD\n" + "D=0\n" + "0;JMP\n" + "(LOADD)\n" + "@SP\n" + "A=M\n"+"M=D\n"+"@SP\n" + "M=M+1\n")
 
-let handlePushSegment (segment, index:string) = 
+let handlePushSegment (segment,index:string) = 
     let mutable new_seg = segment
     match segment with
     | "argument" -> new_seg <- "ARG"
@@ -91,31 +92,49 @@ let handlePopSegment (segment, index) =
 
 let handlePushConstant index= 
     streamWriter.WriteLine("@"+index+"\nD=A\n@SP\nA=M\nM=D\n@SP\nM=M+1")
-let handleStatic segment index =
-    ()
-let handleTemp segment index =
-    ()
-let handlePointer segment index = ()
+
+let handlePushStatic index fileName =
+    let fileNameI = fileName + "." + index
+    streamWriter.WriteLine("@"+fileNameI+"\nD=M\n@"+index+"\nD=D+A\n@"+fileNameI+"\nM=D\n@"+fileNameI+"\nA=M\nD=M\n@SP\nA=M\nM=D\n@SP\nM=M+1")
+
+let handlePopStatic index fileName =
+    let fileNameI = fileName + "." + index
+    streamWriter.WriteLine("@"+fileNameI+"\nD=M\n@"+index+"\nD=D+A\n@"+fileNameI+"\nM=D\n@SP\nM=M-1\n@SP\nA=M\nD=M\n@"+fileNameI+"\nA=M\nM=D\n@"+fileNameI+"\nD=M\n@"+index+"\nD=D-A\n@"+fileNameI+"\nM=D")
+
+let handlePushTemp segment index =
+    let new_seg = "TEMP"
+    streamWriter.WriteLine("@"+new_seg+"\nD=M\n@"+index+"\nD=D+A\n@"+new_seg+"\nM=D\n@"+new_seg+"\nA=M\nD=M\n@SP\nA=M\nM=D\n@SP\nM=M+1")
+
+let handlePopTemp segment index =
+    let new_seg = "TEMP"
+    streamWriter.WriteLine("@"+new_seg+"\nD=M\n@"+index+"\nD=D+A\n@"+new_seg+"\nM=D\n@SP\nM=M-1\n@SP\nA=M\nD=M\n@"+new_seg+"\nA=M\nM=D\n@"+new_seg+"\nD=M\n@"+index+"\nD=D-A\n@"+new_seg+"\nM=D")
+
+let handlePushPointer index = 
+    if index = "1" then streamWriter.WriteLine("@THAT\n" + "D=M\n" + "@SP\n" + "A=M\n" + "M=D\n" + "@SP" + "M=M+1\n") 
+    else if index = "0" then streamWriter.WriteLine("@THIS\n" + "D=M\n" + "@SP\n" + "A=M\n" + "M=D\n" + "@SP" + "M=M+1\n")
+
+let handlePopPointer index =  
+    if index = "1" then streamWriter.WriteLine("@SP\n" + "AM=M-1\n" +  "D=M\n" + "@THAT\n" + "M=D\n")
+    else if index = "0" then streamWriter.WriteLine("@SP\n" + "AM=M-1\n" +  "D=M\n" + "@THIS\n" + "M=D\n")
 
 
-let handlePush(segment:string, index:string) = 
+let handlePush(segment:string, index:string, fileName:string) = 
     match segment with
     |"local" | "argument" | "this" | "that" -> handlePushSegment(segment, index)
     | "constant" ->handlePushConstant index
-    | "static" -> handleStatic segment index
-    | "temp" -> handleTemp segment index
-    | "pointer" -> handlePointer segment index
+    | "static" -> handlePushStatic index fileName
+    | "temp" -> handlePushTemp  segment index
+    | "pointer" -> handlePushPointer index
 
-let handlePop(segment:string, index:string) = 
+let handlePop(segment:string, index:string, fileName:string) = 
     match segment with
     |"local" | "argument" | "this" | "that" -> handlePopSegment(segment, index)
-    | "static" -> handleStatic segment index
-    | "temp" -> handleTemp segment index
-    | "pointer" -> handlePointer segment index
+    | "static" -> handlePopStatic index fileName
+    | "temp" -> handlePopTemp segment index
+    | "pointer" -> handlePopPointer index
     
 
-
-let check_command(command:string) =
+let check_command(fileName:string, command:string) =
     let split = command.Split(" ")
     let mutable counter = 0
     match split[0] with
@@ -125,8 +144,8 @@ let check_command(command:string) =
     | "eq" -> handleEq()
     | "gt" -> handleGt()
     | "lt" -> handleLt()
-    | "push" -> handlePush(split[1], split[2])
-    | "pop" -> handlePop(split[1], split[2])
+    | "push" -> handlePush(split[1], split[2], fileName)
+    | "pop" -> handlePop(split[1], split[2], fileName)
 
 let read_vm_file (file_name:string) =
     let file_path = path + "\\" + file_name
@@ -136,7 +155,7 @@ let read_vm_file (file_name:string) =
     let reComment = Regex(@"^\s*(//.*)?$", RegexOptions.Compiled)
     let cleaned_files = words|> Seq.filter (reComment.IsMatch >> not)
     printfn "%A" cleaned_files
-    cleaned_files |> Seq.iter (fun item -> check_command item)
+    cleaned_files |> Seq.iter (fun item -> check_command (file_name,item))
     counter <- 0
     streamWriter.Flush()
     printfn "End of input file: %s" file_name
