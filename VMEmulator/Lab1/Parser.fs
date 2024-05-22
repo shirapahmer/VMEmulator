@@ -89,7 +89,7 @@ let handlePushSegment (segment,index:string) =
     | "local" -> new_seg <- "LCL"
     | "this" -> new_seg <- "THIS"
     | "that" -> new_seg  <- "THAT"
-    streamWriter.WriteLine("@"+new_seg+"\nD=M\n@"+index+"\nD=D+A\n@"+new_seg+"\nM=D\n@"+new_seg+"\nA=M\nD=M\n@SP\nA=M\nM=D\n@SP\nM=M+1\n"+new_seg+"\nD=M\n@"+index+"\nD=D-A\n@"+new_seg+"\nM=D")
+    streamWriter.WriteLine("@"+new_seg+"\nD=M\n@"+index+"\nD=D+A\n@"+new_seg+"\nM=D\n@"+new_seg+"\nA=M\nD=M\n@SP\nA=M\nM=D\n@SP\nM=M+1\n@"+new_seg+"\nD=M\n@"+index+"\nD=D-A\n@"+new_seg+"\nM=D")
 
 let handlePopSegment (segment, index) = 
     let mutable new_seg = segment
@@ -120,11 +120,11 @@ let handlePopStatic index fileName =
 
 let handlePushTemp segment index =
     let temp_index = Convert.ToString(convertToInt(index)+5)
-    streamWriter.WriteLine("@"+temp_index+"\nD=M\n@SP"+"\nA=M\n"+"A=M\n"+"M=D\n@SP\nM=M+1")
+    streamWriter.WriteLine("@"+temp_index+"\nD=M\n@SP"+"\n"+"A=M\n"+"M=D\n@SP\nM=M+1")
 
 let handlePopTemp segment index =
     let temp_index = Convert.ToString(convertToInt(index)+5)
-    streamWriter.WriteLine("@SP\nAM=M-1\nD=M\n@"+temp_index+"\nM=D")
+    streamWriter.WriteLine("@SP\nM=M-1\nA=M\nD=M\n@"+temp_index+"\nM=D")
 
 let handlePushPointer index = 
     if index = "1" then streamWriter.WriteLine("@THAT\n" + "D=M\n" + "@SP\n" + "A=M\n" + "M=D\n" + "@SP\n" + "M=M+1") 
