@@ -106,22 +106,21 @@ let handlePushConstant index=
 let handlePushStatic index fileName =
     let temp_index = Convert.ToString(convertToInt(index)+16)
     printfn "the temp index is %s" temp_index
-    let fileNameI = fileName + "." + index
+    let fileNameI = fileName + "." + temp_index
     printfn "filename is %s" fileNameI
     //streamWriter.WriteLine("@"+fileNameI+"\nD=M\n@"+temp_index+"\nD=D+A\n@"+fileNameI+"\nM=D\n@"+fileNameI+"\nA=M\nD=M\n@SP\nA=M\nM=D\n@SP\nM=M+1")
     streamWriter.WriteLine("@"+temp_index+"\nD=M\n@SP\nA=M\nM=D\n@SP\nM=M+1")
 
 let handlePopStatic index fileName =
     let temp_index = Convert.ToString(convertToInt(index)+16)
-    printfn "the temp index is %s" temp_index
-    let fileNameI = fileName + "." + index
+    let fileNameI = fileName + "." + temp_index
     printfn "filename is %s" fileNameI
     //streamWriter.WriteLine("@"+fileNameI+"\nD=A\n@"+index+"\nD=D+A\n@"+fileNameI+"\nM=D\n@SP\nM=M-1\n@SP\nA=M\nD=M\n@"+fileNameI+"\nA=M\nM=D\n@"+fileNameI+"\nD=M\n@"+index+"\nD=D-A\n@"+fileNameI+"\nM=D")
     streamWriter.WriteLine("@SP\n"+"AM=M-1\n"+"D=M\n"+"@"+temp_index+"\nM=D")
 
 let handlePushTemp segment index =
     let temp_index = Convert.ToString(convertToInt(index)+5)
-    streamWriter.WriteLine("@"+index+"\nD=M\n@SP"+"\nA=M\n"+"A=M\n"+"M=D\n@SP\nM=M+1")
+    streamWriter.WriteLine("@"+temp_index+"\nD=M\n@SP"+"\nA=M\n"+"A=M\n"+"M=D\n@SP\nM=M+1")
 
 let handlePopTemp segment index =
     let temp_index = Convert.ToString(convertToInt(index)+5)
