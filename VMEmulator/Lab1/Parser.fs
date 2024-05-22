@@ -104,16 +104,24 @@ let handlePushConstant index=
     streamWriter.WriteLine("@"+index+"\nD=A\n@SP\nA=M\nM=D\n@SP\nM=M+1")
 
 let handlePushStatic index fileName =
+    let temp_index = Convert.ToString(convertToInt(index)+16)
+    printfn "the temp index is %s" temp_index
     let fileNameI = fileName + "." + index
-    streamWriter.WriteLine("@"+fileNameI+"\nD=M\n@"+index+"\nD=D+A\n@"+fileNameI+"\nM=D\n@"+fileNameI+"\nA=M\nD=M\n@SP\nA=M\nM=D\n@SP\nM=M+1")
+    printfn "filename is %s" fileNameI
+    //streamWriter.WriteLine("@"+fileNameI+"\nD=M\n@"+temp_index+"\nD=D+A\n@"+fileNameI+"\nM=D\n@"+fileNameI+"\nA=M\nD=M\n@SP\nA=M\nM=D\n@SP\nM=M+1")
+    streamWriter.WriteLine("@"+temp_index+"\nD=M\n@SP\nA=M\nM=D\n@SP\nM=M+1")
 
 let handlePopStatic index fileName =
+    let temp_index = Convert.ToString(convertToInt(index)+16)
+    printfn "the temp index is %s" temp_index
     let fileNameI = fileName + "." + index
-    streamWriter.WriteLine("@"+fileNameI+"\nD=M\n@"+index+"\nD=D+A\n@"+fileNameI+"\nM=D\n@SP\nM=M-1\n@SP\nA=M\nD=M\n@"+fileNameI+"\nA=M\nM=D\n@"+fileNameI+"\nD=M\n@"+index+"\nD=D-A\n@"+fileNameI+"\nM=D")
+    printfn "filename is %s" fileNameI
+    //streamWriter.WriteLine("@"+fileNameI+"\nD=A\n@"+index+"\nD=D+A\n@"+fileNameI+"\nM=D\n@SP\nM=M-1\n@SP\nA=M\nD=M\n@"+fileNameI+"\nA=M\nM=D\n@"+fileNameI+"\nD=M\n@"+index+"\nD=D-A\n@"+fileNameI+"\nM=D")
+    streamWriter.WriteLine("@SP\n"+"AM=M-1\n"+"D=M\n"+"@"+temp_index+"\nM=D")
 
 let handlePushTemp segment index =
     let temp_index = Convert.ToString(convertToInt(index)+5)
-    streamWriter.WriteLine("@"+temp_index+"\nD=M\n@SP"+"\nA=M\n"+"A=M\n"+"M=D\n@SP\nM=M+1")
+    streamWriter.WriteLine("@"+index+"\nD=M\n@SP"+"\nA=M\n"+"A=M\n"+"M=D\n@SP\nM=M+1")
 
 let handlePopTemp segment index =
     let temp_index = Convert.ToString(convertToInt(index)+5)
@@ -146,6 +154,7 @@ let handlePop(segment:string, index:string, fileName:string) =
 
 let check_command(fileName:string, command:string) =
     let split = command.Split(" ")
+    let file_split = fileName.Split(".") //get file name without .vm attached
     let mutable counter = 0
     match split[0] with
     | "add" -> handleAdd()
@@ -157,8 +166,8 @@ let check_command(fileName:string, command:string) =
     | "or" -> handleOr()
     | "and" -> handleAnd()
     | "not" -> handleNot()
-    | "push" -> handlePush(split[1], split[2], fileName)
-    | "pop" -> handlePop(split[1], split[2], fileName)
+    | "push" -> handlePush(split[1], split[2], file_split[0])
+    | "pop" -> handlePop(split[1], split[2], file_split[0])
    
 
 
