@@ -89,7 +89,7 @@ let handlePushSegment (segment,index:string) =
     | "local" -> new_seg <- "LCL"
     | "this" -> new_seg <- "THIS"
     | "that" -> new_seg  <- "THAT"
-    streamWriter.WriteLine("@"+new_seg+"\nD=M\n@"+index+"\nD=D+A\n@"+new_seg+"\nM=D\n@"+new_seg+"\nA=M\nD=M\n@SP\nA=M\nM=D\n@SP\nM=M+1")
+    streamWriter.WriteLine("@"+new_seg+"\nD=M\n@"+index+"\nD=D+A\n@"+new_seg+"\nM=D\n@"+new_seg+"\nA=M\nD=M\n@SP\nA=M\nM=D\n@SP\nM=M+1\n"+new_seg+"\nD=M\n@"+index+"\nD=D-A\n@"+new_seg+"\nM=D")
 
 let handlePopSegment (segment, index) = 
     let mutable new_seg = segment
