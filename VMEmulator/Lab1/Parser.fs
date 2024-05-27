@@ -162,6 +162,16 @@ let handlePop(segment:string, index:string, fileName:string) =
     | "temp" -> handlePopTemp segment index
     | "pointer" -> handlePopPointer index
     
+let handleLabel (label:string) = 
+    streamWriter.WriteLine("("+label+")")
+
+let handleIfGoTo (label:string) =
+    streamWriter.WriteLine("@SP\nM=M-1\nA=M\nD=M\n@R13\nM=D\n@R13\nD=M\n@"+label+"\nD;JNE")
+
+let handleGoTo (label:string) = 
+    streamWriter.WriteLine("@"+label+"\n0;JMP")
+
+
 //takes in the command and calls correct corresponding function
 let check_command(fileName:string, command:string) =
     let split = command.Split(" ")
@@ -179,7 +189,17 @@ let check_command(fileName:string, command:string) =
     | "not" -> handleNot()
     | "push" -> handlePush(split[1], split[2], file_split[0])
     | "pop" -> handlePop(split[1], split[2], file_split[0])
-   
+    | "label" -> handleLabel(split[1])
+    | "if-goto" -> handleIfGoTo(split[1])
+    | "goto" -> handleGoTo(split[1])
+
+
+let removeLeadingWhitespace input: string =
+    // Regex to match leading whitespace
+    let regex = Regex(@"^\s+", RegexOptions.Compiled)
+    // Replace leading whitespace with an empty string
+    regex.Replace(input, "")
+
 //read in each command from the .vm file ignoring comments and blank lines and send to check_command()
 let read_vm_file (file_name:string) =
     let file_path = path + "\\" + file_name
@@ -187,7 +207,9 @@ let read_vm_file (file_name:string) =
     // clean file of comments and empty lines
     let regComment = Regex(@"^\s*(//.*)?$", RegexOptions.Compiled)
     let cleaned_files = words|> Seq.filter (regComment.IsMatch >> not)
-    cleaned_files |> Seq.iter (fun item -> check_command (file_name,item))
+    let no_whiteSpace = cleaned_files|> Seq.map(fun clean -> removeLeadingWhitespace clean)
+    printfn "cleanedfiles is %A" no_whiteSpace
+    no_whiteSpace |> Seq.iter (fun item -> check_command (file_name,item))
     counter <- 0 
     streamWriter.Flush()
     printfn "End of input file: %s" file_name
