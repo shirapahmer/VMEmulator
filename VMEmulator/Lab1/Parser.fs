@@ -22,6 +22,7 @@ file.Close()
 //opens streamwriter to write to the new .asm file
 use streamWriter = new StreamWriter(full_path)
 
+
 //looks in the directory for all .vm files
 let directory =DirectoryInfo(path) //get directory
 let files = directory.GetFiles()  //get all file paths of all files in the directory 
@@ -38,14 +39,18 @@ let convertToInt(str:string)=
     result
     
 let mutable counter = 0  //global counter tracking number of logical commands
+let mutable callCounter = 0
+let mutable functionCounter = 0
 
 //converts "add" command to hack
 let handleAdd() = 
-    streamWriter.WriteLine("@SP\nD=M-1\nA=D\nD=M\nA=A-1\nD=M+D\nM=D\nD=A+1\n@SP\nM=D")
+    printfn "in add"
+    streamWriter.WriteLine("//ADD\n@SP\nD=M-1\nA=D\nD=M\nA=A-1\nD=M+D\nM=D\nD=A+1\n@SP\nM=D")
 
 //converts "sub" command to hack
 let handleSub() = 
-    streamWriter.WriteLine("@SP\nD=M-1\nA=D\nD=M\nA=A-1\nD=M-D\nM=D\nD=A+1\n@SP\nM=D")
+    printfn "in sub"
+    streamWriter.WriteLine("//SUB\n@SP\nD=M-1\nA=D\nD=M\nA=A-1\nD=M-D\nM=D\nD=A+1\n@SP\nM=D")
 
 //converts "neg" command to hack
 let handleNeg() = 
@@ -53,7 +58,7 @@ let handleNeg() =
 
 //converts "not" command to hack
 let handleNot() = 
-    streamWriter.WriteLine("@SP\nA=M-1\nD=M\nM=!D")
+    streamWriter.WriteLine("//NOT\n@SP\nA=M-1\nD=M\nM=!D")
 
 //converts "and" command to hack
 let handleAnd() = 
@@ -67,7 +72,7 @@ let handleOr() =
 let handleEq() = 
     counter <- counter+1 //ensures uniqueness of each label 
     let stringCounter = Convert.ToString(counter)
-    streamWriter.WriteLine("@SP\n" + "AM=M-1\n" + "D=M\n" + "@SP\n" + "AM=M-1\n" + "D=D-M\n" + "@EQL" + stringCounter
+    streamWriter.WriteLine("//equal\n@SP\n" + "AM=M-1\n" + "D=M\n" + "@SP\n" + "AM=M-1\n" + "D=D-M\n" + "@EQL" + stringCounter
     + "\n" + "D;JEQ\n" + "@NOTEQUAL" + stringCounter + "\n" + "0;JMP" + "\n" + "(EQL" + stringCounter + ")\n" + "@LOADDEQ" + stringCounter + "\n" + "D=-1\n" + "0;JMP\n" + "(NOTEQUAL" + stringCounter + ")\n" +
     "@LOADDEQ" + stringCounter + "\n" + "D=0\n" + "0;JMP\n" + "(LOADDEQ" + stringCounter + ")\n" + "@SP\n" + "A=M\n"+"M=D\n"+"@SP\n" + "M=M+1")
 
@@ -75,7 +80,7 @@ let handleEq() =
 let handleGt() =
     counter <- counter+1 //ensures uniqueness of each label 
     let stringCounter = Convert.ToString(counter)
-    streamWriter.WriteLine("@SP\n" + "AM=M-1\n" + "D=M\n" + "@SP\n" + "AM=M-1\n" + "D=M-D\n" + "@GREATERTHAN_" +  stringCounter + "\n" +
+    streamWriter.WriteLine("//greatherthan\n@SP\n" + "AM=M-1\n" + "D=M\n" + "@SP\n" + "AM=M-1\n" + "D=M-D\n" + "@GREATERTHAN_" +  stringCounter + "\n" +
     "D;JGT\n" + "@LESSTHAN_"  + stringCounter + "\n" + "0;JMP\n" + "(GREATERTHAN_" + stringCounter + ")\n" + "@LOADDGT"  + stringCounter + "\n" 
     + "D=-1\n" + "0;JMP\n" + "(LESSTHAN_" + stringCounter + ")\n" + "@LOADDGT"  + stringCounter + "\n" + "D=0\n" + "0;JMP\n" + "(LOADDGT" 
     + stringCounter + ")\n" + "@SP\n" + "A=M\n"+"M=D\n"+"@SP\n" + "M=M+1")
@@ -84,64 +89,73 @@ let handleGt() =
 let handleLt() = 
     counter <- counter+1 //ensures uniqueness of each label 
     let stringCounter = Convert.ToString(counter)
-    streamWriter.WriteLine("@SP\n" + "AM=M-1\n" + "D=M\n" + "@SP\n" + "AM=M-1\n" + "D=D-M\n" + "@GREATERTHAN"  + stringCounter + "\n" + 
+    streamWriter.WriteLine("//lessthan\n@SP\n" + "AM=M-1\n" + "D=M\n" + "@SP\n" + "AM=M-1\n" + "D=D-M\n" + "@GREATERTHAN"  + stringCounter + "\n" + 
     "D;JGT\n" + "@LESSTHAN"  + stringCounter + "\n" + "0;JMP\n" + "(GREATERTHAN"  + stringCounter + ")\n"+ "@LOADDLT"  + stringCounter +
     "\n" + "D=-1\n" + "0;JMP\n" + "(LESSTHAN"  + stringCounter + ")\n" +
     "@LOADDLT"  + stringCounter + "\n"+"D=0\n" + "0;JMP\n" + "(LOADDLT" + stringCounter + ")\n" + "@SP\n" + "A=M\n"+"M=D\n"+"@SP\n" + "M=M+1")
 
 //converts "push segment index" command to hack
 let handlePushSegment (segment,index:string) = 
+    printfn "in push segment %s" segment
     let mutable new_seg = segment
     match segment with
     | "argument" -> new_seg <- "ARG"
     | "local" -> new_seg <- "LCL"
     | "this" -> new_seg <- "THIS"
     | "that" -> new_seg  <- "THAT"
-    streamWriter.WriteLine("@"+new_seg+"\nD=M\n@"+index+"\nD=D+A\n@"+new_seg+"\nM=D\n@"+new_seg+"\nA=M\nD=M\n@SP\nA=M\nM=D\n@SP\nM=M+1\n@"+new_seg+"\nD=M\n@"+index+"\nD=D-A\n@"+new_seg+"\nM=D")
+    streamWriter.WriteLine("//PUSHSEG\n@"+new_seg+"\nD=M\n@"+index+"\nD=D+A\n@"+new_seg+"\nM=D\n@"+new_seg+"\nA=M\nD=M\n@SP\nA=M\nM=D\n@SP\nM=M+1\n@"+new_seg+"\nD=M\n@"+index+"\nD=D-A\n@"+new_seg+"\nM=D")
 
 //converts "pop segment index" command to hack
 let handlePopSegment (segment, index) = 
+    printfn "in pop segment %s" segment
     let mutable new_seg = segment
     match segment with
     | "argument" -> new_seg <- "ARG"
     | "local" -> new_seg <- "LCL"
     | "this" -> new_seg <- "THIS"
     | "that" -> new_seg  <- "THAT"
-    streamWriter.WriteLine("@"+new_seg+"\nD=M\n@"+index+"\nD=D+A\n@"+new_seg+"\nM=D\n@SP\nM=M-1\n@SP\nA=M\nD=M\n@"+new_seg+"\nA=M\nM=D\n@"+new_seg+"\nD=M\n@"+index+"\nD=D-A\n@"+new_seg+"\nM=D")
+    streamWriter.WriteLine("//POPSEG\n@"+new_seg+"\nD=M\n@"+index+"\nD=D+A\n@"+new_seg+"\nM=D\n@SP\nM=M-1\n@SP\nA=M\nD=M\n@"+new_seg+"\nA=M\nM=D\n@"+new_seg+"\nD=M\n@"+index+"\nD=D-A\n@"+new_seg+"\nM=D")
 
 //converts "push constant" command to hack
 let handlePushConstant index= 
-    streamWriter.WriteLine("@"+index+"\nD=A\n@SP\nA=M\nM=D\n@SP\nM=M+1")
+    printfn "in push constant"
+    streamWriter.WriteLine("//pushconst\n@"+index+"\nD=A\n@SP\nA=M\nM=D\n@SP\nM=M+1")
 
 //converts "push static index" command to hack
 let handlePushStatic index fileName =
+    printfn "in push static"
     let temp_index = Convert.ToString(convertToInt(index)+16) //calculate static index in ram
-    //let fileNameI = fileName + "." + temp_index
-    streamWriter.WriteLine("@"+temp_index+"\nD=M\n@SP\nA=M\nM=D\n@SP\nM=M+1")
+    let fileNameI = fileName + "." + temp_index
+    streamWriter.WriteLine("//pushstatic\n@"+fileNameI+"\nD=M\n@SP\nA=M\nM=D\n@SP\nM=M+1")
 
 //converts "pop static" command to hack
 let handlePopStatic index fileName =
+    printfn "in pop static"
     let temp_index = Convert.ToString(convertToInt(index)+16) //calculate static index in ram
     let fileNameI = fileName + "." + temp_index
-    streamWriter.WriteLine("@SP\n"+"AM=M-1\n"+"D=M\n"+"@"+temp_index+"\nM=D")
+    streamWriter.WriteLine("//popstatic\n@SP\n"+"AM=M-1\n"+"D=M\n"+"@"+fileNameI+"\nM=D")
 
 //converts "push temp" command to hack
 let handlePushTemp segment index =
+    printfn "in push temp"
     let temp_index = Convert.ToString(convertToInt(index)+5) //calculate temp index in ram
-    streamWriter.WriteLine("@"+temp_index+"\nD=M\n@SP"+"\n"+"A=M\n"+"M=D\n@SP\nM=M+1")
+    streamWriter.WriteLine("//pushtemp\n@"+temp_index+"\nD=M\n@SP"+"\n"+"A=M\n"+"M=D\n@SP\nM=M+1")
 
 //converts "pop temp" command to hack
 let handlePopTemp segment index =
+    printfn "in pop temp"
     let temp_index = Convert.ToString(convertToInt(index)+5) //calculate temp index in ram
-    streamWriter.WriteLine("@SP\nM=M-1\nA=M\nD=M\n@"+temp_index+"\nM=D")
+    streamWriter.WriteLine("//poptemp\n@SP\nM=M-1\nA=M\nD=M\n@"+temp_index+"\nM=D")
 
 //calculate "push pointer index" command to hack
-let handlePushPointer index = 
+let handlePushPointer index =
+    printfn "in push pointer"
     if index = "1" then streamWriter.WriteLine("@THAT\n" + "D=M\n" + "@SP\n" + "A=M\n" + "M=D\n" + "@SP\n" + "M=M+1") 
     else if index = "0" then streamWriter.WriteLine("@THIS\n" + "D=M\n" + "@SP\n" + "A=M\n" + "M=D\n" + "@SP\n" + "M=M+1")
 
 //calculate "pop pointer index" command to hack
 let handlePopPointer index =  
+    printfn "in pop pointer"
     if index = "1" then streamWriter.WriteLine("@SP\n" + "AM=M-1\n" +  "D=M\n" + "@THAT\n" + "M=D")
     else if index = "0" then streamWriter.WriteLine("@SP\n" + "AM=M-1\n" +  "D=M\n" + "@THIS\n" + "M=D")
 
@@ -163,20 +177,51 @@ let handlePop(segment:string, index:string, fileName:string) =
     | "pointer" -> handlePopPointer index
     
 let handleLabel (label:string) = 
-    streamWriter.WriteLine("("+label+")")
+    printfn "in label"
+    streamWriter.WriteLine("//LABEL\n("+label+")")
 
 let handleIfGoTo (label:string) =
-    streamWriter.WriteLine("@SP\nM=M-1\nA=M\nD=M\n@R13\nM=D\n@R13\nD=M\n@"+label+"\nD;JNE")
+    printfn "in ifgoto"
+    streamWriter.WriteLine("//ifgoto\n@SP\nM=M-1\nA=M\nD=M\n@R13\nM=D\n@R13\nD=M\n@"+label+"\nD;JNE")
 
 let handleGoTo (label:string) = 
-    streamWriter.WriteLine("@"+label+"\n0;JMP")
+    printfn "in goto"
+    streamWriter.WriteLine("//goto\n@"+label+"\n0;JMP")
 
+let handleCall(fileName:string,funcName:string, nArgs:string) =
+    printfn "in call"
+    let retName = fileName + "." + funcName + "$ret" + Convert.ToString(callCounter)
+    callCounter <- callCounter+1
+    streamWriter.WriteLine("//CALL\n@"+retName+"\nD=A\n@SP\nA=M\nM=D\n@SP\nM=M+1\n@LCL\nD=M\n@SP\nA=M\nM=D\n@SP\nM=M+1\n@ARG\nD=M\n@SP\nA=M\nM=D\n@SP\nM=M+1\n@THIS\nD=M\n@SP\nA=M\nM=D\n@SP\nM=M+1\n@THAT\nD=M\n@SP\nA=M\nM=D\n@SP\nM=M+1\n@SP\nD=M\n@5\nD=D-A\n@"+nArgs+"\nD=D-A\n@ARG\nM=D\n@SP\nD=M\n@LCL\nM=D")
+    let funcNameI = funcName + Convert.ToString(functionCounter)
+    handleGoTo funcNameI
+    streamWriter.WriteLine("("+retName+")")
+
+let callBootstrap() =
+    let retName = "bootstrap" + "." + "Sys.init" + "$ret" + Convert.ToString(callCounter)
+    streamWriter.WriteLine("@256\nD=A\n@SP\nM=D")  //setting stack pointer
+    handleCall("bootstrap", "Sys.init", "0")
+
+let handleFunction(funcName:string, nVars:string) =
+    printfn "in function"
+    let funcNameI = funcName + Convert.ToString(functionCounter)
+    streamWriter.WriteLine("//FUNCTION\n("+funcNameI+")\n@LCL\nA=M\nD=A")
+    for i = 1 to convertToInt(nVars) do
+        streamWriter.WriteLine("@"+ Convert.ToString(i)+"\nA=D+A\nM=0")
+    streamWriter.WriteLine("@SP\nD=M\n@"+nVars+"\nD=D+A\n@SP\nM=D")
+
+let handleReturn() =
+    printfn "in return"
+    streamWriter.WriteLine("//RETURN\n@LCL\nA=M\nD=A\n@R14\nM=D\n@5\nA=D-A\nD=M\n@R13\nM=D\n@SP\nAM=M-1\nD=M\n@ARG\nA=M\nM=D\n@ARG\nD=M\n@SP\nM=D+1\n@R14\nD=M\n@1\nD=D-A\n@THAT\nM=D\n@R14\nD=M\n@2\nD=D-A\nA=D\nD=M\n@THIS\nM=D\n@R14\nD=M\n@3\nD=D-A\nA=D\nD=M\n@ARG\nM=D\n@R14\nD=M\n@4\nD=D-A\nA=D\nD=M\n@LCL\nM=D\n@R13\nA=M\n0;JMP")
+    
 
 //takes in the command and calls correct corresponding function
 let check_command(fileName:string, command:string) =
     let split = command.Split(" ")
     let file_split = fileName.Split(".") //get file name without .vm attached
     let mutable counter = 0 //reset logical counter for each new file
+    let mutable callCounter = 0
+
     match split[0] with
     | "add" -> handleAdd()
     | "sub" -> handleSub()
@@ -192,6 +237,9 @@ let check_command(fileName:string, command:string) =
     | "label" -> handleLabel(split[1])
     | "if-goto" -> handleIfGoTo(split[1])
     | "goto" -> handleGoTo(split[1])
+    | "function" -> handleFunction(split[1], split[2])
+    | "call" -> handleCall(file_split[0],split[1], split[2])
+    | "return" -> handleReturn()
 
 
 let removeLeadingWhitespace input: string =
@@ -202,6 +250,7 @@ let removeLeadingWhitespace input: string =
 
 //read in each command from the .vm file ignoring comments and blank lines and send to check_command()
 let read_vm_file (file_name:string) =
+    printfn "file name: %s" file_name
     let file_path = path + "\\" + file_name
     let words = File.ReadAllLines(file_path)
     // clean file of comments and empty lines
@@ -210,9 +259,12 @@ let read_vm_file (file_name:string) =
     let no_whiteSpace = cleaned_files|> Seq.map(fun clean -> removeLeadingWhitespace clean)
     printfn "cleanedfiles is %A" no_whiteSpace
     no_whiteSpace |> Seq.iter (fun item -> check_command (file_name,item))
-    counter <- 0 
+    counter <- 0
+    callCounter <- 0
+    functionCounter <- 0
     streamWriter.Flush()
     printfn "End of input file: %s" file_name
 
+callBootstrap()
 //for each file in the filtered list, send to read_vm_file()
 filtered |> Array.map(fun name -> read_vm_file name)
