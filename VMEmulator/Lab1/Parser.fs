@@ -201,18 +201,19 @@ let callBootstrap() =
     let retName = "bootstrap" + "." + "Sys.init" + "$ret" + Convert.ToString(callCounter)
     streamWriter.WriteLine("@256\nD=A\n@SP\nM=D")  //setting stack pointer
     handleCall("bootstrap", "Sys.init", "0")
+  
 
 let handleFunction(funcName:string, nVars:string) =
     printfn "in function"
     let funcNameI = funcName + Convert.ToString(functionCounter)
     streamWriter.WriteLine("//FUNCTION\n("+funcNameI+")\n@LCL\nA=M\nD=A")
-    for i = 1 to convertToInt(nVars) do
+    for i = 0 to convertToInt(nVars) do
         streamWriter.WriteLine("@"+ Convert.ToString(i)+"\nA=D+A\nM=0")
     streamWriter.WriteLine("@SP\nD=M\n@"+nVars+"\nD=D+A\n@SP\nM=D")
 
 let handleReturn() =
     printfn "in return"
-    streamWriter.WriteLine("//RETURN\n@LCL\nA=M\nD=A\n@R14\nM=D\n@5\nA=D-A\nD=M\n@R13\nM=D\n@SP\nAM=M-1\nD=M\n@ARG\nA=M\nM=D\n@ARG\nD=M\n@SP\nM=D+1\n@R14\nD=M\n@1\nD=D-A\n@THAT\nM=D\n@R14\nD=M\n@2\nD=D-A\nA=D\nD=M\n@THIS\nM=D\n@R14\nD=M\n@3\nD=D-A\nA=D\nD=M\n@ARG\nM=D\n@R14\nD=M\n@4\nD=D-A\nA=D\nD=M\n@LCL\nM=D\n@R13\nA=M\n0;JMP")
+    streamWriter.WriteLine("//RETURN\n@LCL\nA=M\nD=A\n@R14\nM=D\n@5\nA=D-A\nD=M\n@R13\nM=D\n@SP\nAM=M-1\nD=M\n@ARG\nA=M\nM=D\n@ARG\nD=M\n@SP\nM=D+1\n@R14\nD=M\n@1\nD=D-A\nA=D\nD=M\n@THAT\nM=D\n@R14\nD=M\n@2\nD=D-A\nA=D\nD=M\n@THIS\nM=D\n@R14\nD=M\n@3\nD=D-A\nA=D\nD=M\n@ARG\nM=D\n@R14\nD=M\n@4\nD=D-A\nA=D\nD=M\n@LCL\nM=D\n@R13\nA=M\n0;JMP")
     
 
 //takes in the command and calls correct corresponding function
