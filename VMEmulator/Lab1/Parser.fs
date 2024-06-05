@@ -8,6 +8,7 @@ open System.Text.RegularExpressions
 (*
 Program that takes in a path to a directory containing any number of .vm files, reads in the files, translates
 the vm commands into hack and prints them to a .asm file with the same name as the .vm file
+Implements bootstrapping on files that don't hhave their own
 *)
 
 
@@ -96,7 +97,7 @@ let handleLt() =
 
 //converts "push segment index" command to hack
 let handlePushSegment (segment,index:string) = 
-    printfn "in push segment %s" segment
+    //printfn "in push segment %s" segment
     let mutable new_seg = segment
     match segment with
     | "argument" -> new_seg <- "ARG"
@@ -107,7 +108,7 @@ let handlePushSegment (segment,index:string) =
 
 //converts "pop segment index" command to hack
 let handlePopSegment (segment, index) = 
-    printfn "in pop segment %s" segment
+    //printfn "in pop segment %s" segment
     let mutable new_seg = segment
     match segment with
     | "argument" -> new_seg <- "ARG"
@@ -118,44 +119,44 @@ let handlePopSegment (segment, index) =
 
 //converts "push constant" command to hack
 let handlePushConstant index= 
-    printfn "in push constant"
+    //printfn "in push constant"
     streamWriter.WriteLine("//pushconst\n@"+index+"\nD=A\n@SP\nA=M\nM=D\n@SP\nM=M+1")
 
 //converts "push static index" command to hack
 let handlePushStatic index fileName =
-    printfn "in push static"
+    //printfn "in push static"
     let temp_index = Convert.ToString(convertToInt(index)+16) //calculate static index in ram
     let fileNameI = fileName + "." + temp_index
     streamWriter.WriteLine("//pushstatic\n@"+fileNameI+"\nD=M\n@SP\nA=M\nM=D\n@SP\nM=M+1")
 
 //converts "pop static" command to hack
 let handlePopStatic index fileName =
-    printfn "in pop static"
+    //printfn "in pop static"
     let temp_index = Convert.ToString(convertToInt(index)+16) //calculate static index in ram
     let fileNameI = fileName + "." + temp_index
     streamWriter.WriteLine("//popstatic\n@SP\n"+"AM=M-1\n"+"D=M\n"+"@"+fileNameI+"\nM=D")
 
 //converts "push temp" command to hack
 let handlePushTemp segment index =
-    printfn "in push temp"
+    //printfn "in push temp"
     let temp_index = Convert.ToString(convertToInt(index)+5) //calculate temp index in ram
     streamWriter.WriteLine("//pushtemp\n@"+temp_index+"\nD=M\n@SP"+"\n"+"A=M\n"+"M=D\n@SP\nM=M+1")
 
 //converts "pop temp" command to hack
 let handlePopTemp segment index =
-    printfn "in pop temp"
+    //printfn "in pop temp"
     let temp_index = Convert.ToString(convertToInt(index)+5) //calculate temp index in ram
     streamWriter.WriteLine("//poptemp\n@SP\nM=M-1\nA=M\nD=M\n@"+temp_index+"\nM=D")
 
 //calculate "push pointer index" command to hack
 let handlePushPointer index =
-    printfn "in push pointer"
+    //printfn "in push pointer"
     if index = "1" then streamWriter.WriteLine("@THAT\n" + "D=M\n" + "@SP\n" + "A=M\n" + "M=D\n" + "@SP\n" + "M=M+1") 
     else if index = "0" then streamWriter.WriteLine("@THIS\n" + "D=M\n" + "@SP\n" + "A=M\n" + "M=D\n" + "@SP\n" + "M=M+1")
 
 //calculate "pop pointer index" command to hack
 let handlePopPointer index =  
-    printfn "in pop pointer"
+    //printfn "in pop pointer"
     if index = "1" then streamWriter.WriteLine("@SP\n" + "AM=M-1\n" +  "D=M\n" + "@THAT\n" + "M=D")
     else if index = "0" then streamWriter.WriteLine("@SP\n" + "AM=M-1\n" +  "D=M\n" + "@THIS\n" + "M=D")
 
@@ -176,20 +177,24 @@ let handlePop(segment:string, index:string, fileName:string) =
     | "temp" -> handlePopTemp segment index
     | "pointer" -> handlePopPointer index
     
+//writes a label command in asm
 let handleLabel (label:string) = 
-    printfn "in label"
+    //printfn "in label"
     streamWriter.WriteLine("//LABEL\n("+label+")")
 
+    //handles an if-goto command and prints in asm
 let handleIfGoTo (label:string) =
-    printfn "in ifgoto"
+    //printfn "in ifgoto"
     streamWriter.WriteLine("//ifgoto\n@SP\nM=M-1\nA=M\nD=M\n@R13\nM=D\n@R13\nD=M\n@"+label+"\nD;JNE")
 
+    //handles and prints regular (unconditional) goto
 let handleGoTo (label:string) = 
-    printfn "in goto"
+    //printfn "in goto"
     streamWriter.WriteLine("//goto\n@"+label+"\n0;JMP")
 
+//takes in file name, func name, nArgs and writes the call command in asm
 let handleCall(fileName:string,funcName:string, nArgs:string) =
-    printfn "in call"
+    //printfn "in call"
     let retName = fileName + "." + funcName + "$ret" + Convert.ToString(callCounter)
     callCounter <- callCounter+1
     streamWriter.WriteLine("//CALL\n@"+retName+"\nD=A\n@SP\nA=M\nM=D\n@SP\nM=M+1\n@LCL\nD=M\n@SP\nA=M\nM=D\n@SP\nM=M+1\n@ARG\nD=M\n@SP\nA=M\nM=D\n@SP\nM=M+1\n@THIS\nD=M\n@SP\nA=M\nM=D\n@SP\nM=M+1\n@THAT\nD=M\n@SP\nA=M\nM=D\n@SP\nM=M+1\n@SP\nD=M\n@5\nD=D-A\n@"+nArgs+"\nD=D-A\n@ARG\nM=D\n@SP\nD=M\n@LCL\nM=D")
@@ -197,20 +202,22 @@ let handleCall(fileName:string,funcName:string, nArgs:string) =
     handleGoTo funcNameI
     streamWriter.WriteLine("("+retName+")")
 
+//writes the bootstrap 
 let callBootstrap() =
     let retName = "bootstrap" + "." + "Sys.init" + "$ret" + Convert.ToString(callCounter)
     streamWriter.WriteLine("@256\nD=A\n@SP\nM=D")  //setting stack pointer
     handleCall("bootstrap", "Sys.init", "0")
   
-
+//this writes the function in asm
 let handleFunction(funcName:string, nVars:string) =
-    printfn "in function"
+    //printfn "in function"
     let funcNameI = funcName + Convert.ToString(functionCounter)
     streamWriter.WriteLine("//FUNCTION\n("+funcNameI+")\n@LCL\nA=M\nD=A")
     for i = 0 to convertToInt(nVars) do
         streamWriter.WriteLine("@"+ Convert.ToString(i)+"\nA=D+A\nM=0")
     streamWriter.WriteLine("@SP\nD=M\n@"+nVars+"\nD=D+A\n@SP\nM=D")
 
+//writes return in asm
 let handleReturn() =
     printfn "in return"
     streamWriter.WriteLine("//RETURN\n@LCL\nA=M\nD=A\n@R14\nM=D\n@5\nA=D-A\nD=M\n@R13\nM=D\n@SP\nAM=M-1\nD=M\n@ARG\nA=M\nM=D\n@ARG\nD=M\n@SP\nM=D+1\n@R14\nD=M\n@1\nD=D-A\nA=D\nD=M\n@THAT\nM=D\n@R14\nD=M\n@2\nD=D-A\nA=D\nD=M\n@THIS\nM=D\n@R14\nD=M\n@3\nD=D-A\nA=D\nD=M\n@ARG\nM=D\n@R14\nD=M\n@4\nD=D-A\nA=D\nD=M\n@LCL\nM=D\n@R13\nA=M\n0;JMP")
@@ -266,6 +273,11 @@ let read_vm_file (file_name:string) =
     streamWriter.Flush()
     printfn "End of input file: %s" file_name
 
-callBootstrap()
+    //tests if file is Sys.vm and if so calls our bootstrap
+let testForBootstrap(file_name:string) = 
+    if file_name.Equals("Sys.vm") then callBootstrap()
+
+//for each file in the filtered list, check if it is Sys.vm and if we need to do our own bootstrap
+filtered |> Array.map(fun name -> testForBootstrap name)
 //for each file in the filtered list, send to read_vm_file()
 filtered |> Array.map(fun name -> read_vm_file name)
