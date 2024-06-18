@@ -1,4 +1,5 @@
-﻿open System
+﻿module Parser
+open System
 open System.IO
 open System.Text.RegularExpressions
 
@@ -8,12 +9,12 @@ open System.Text.RegularExpressions
 (*
 Program that takes in a path to a directory containing any number of .vm files, reads in the files, translates
 the vm commands into hack and prints them to a .asm file with the same name as the .vm file
-Implements bootstrapping on files that don't hhave their own
+Implements bootstrapping on files that don't have their own
 *)
 
 
 //reads in a path from the user and creates a .asm file with the same name as the directory
-printfn "Enter path of test directory: "
+printfn "Enter path of Test directory: "
 let path = Console.ReadLine()  
 let split_path = path.Split('\\') //split path based on / 
 let file_name = Seq.last split_path //get the name of the file
