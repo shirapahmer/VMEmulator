@@ -22,7 +22,7 @@ let filtered = vm_files |> Array.filter(String.IsNullOrEmpty >> not) //.jack fil
    
 let chars = ['a';'b';'c';'d';'e';'f';'g';'h';'i';'j';'k';'l';'m';'n';'o';'p';'q';'r';'s';'t';'u';'v';'w';'x';'y';'z';'A';'B';'C';'D';'E';'F';'G';'H';'I';'J';'K';'L';'M';'N';'O';'P';'Q';'R';'S';'T';'U';'V';'W';'X';'Y';'Z']
 let nums = ['0';'1';'2';'3';'4';'5';'6';'7';'8';'9']
-let symbols = ['{';'}';'(';')';'~';'[';']';'+';'-';'*';',';';';'/';'<';'>';'=';'&';'|']
+let symbols = ['{';'}';'(';')';'~';'[';']';'+';'-';'*';',';';';'/';'<';'>';'=';'&';'|';'.']
 
 let handleClass(line:string, streamWriter:StreamWriter)=
     let words = line.Split(" ")
@@ -54,9 +54,14 @@ let handleKeyword(token:string, streamWriter:StreamWriter) =
 
 let handleSymbol(token:string, streamWriter:StreamWriter) =
     printfn "in symbol"
-    streamWriter.WriteLine("<symbol> "+token+" </symbol>")
-
+    match token with
+    | "<" -> streamWriter.WriteLine("<symbol> &lt; </symbol>")
+    | ">" -> streamWriter.WriteLine("<symbol> &gt; </symbol>")
+    | "&" -> streamWriter.WriteLine("<symbol> &amp; </symbol>")
+    | "" -> streamWriter.WriteLine("<symbol> &quot; </symbol>")
+    | _ -> streamWriter.WriteLine("<symbol> "+token+" </symbol>")
     
+
 let handleIntegerConst(token:string, streamWriter:StreamWriter) =
     printfn "in integer const"
     streamWriter.WriteLine("<integerConstant> "+token+" </integerConstant>")
@@ -85,20 +90,24 @@ let tokenize (line:string, streamWriter:StreamWriter) =
 
             while(counter <line.Length) do //iterate through each character in the line
                 printfn "TOKEN IN WHILE %A" token
+                if line[counter].Equals(Convert.ToChar(32)) then
+                    counter <- counter+1
+
                 if List.exists (fun elem -> elem = line[counter]) chars then  //if the first char is a letter then its a keyword or identifier and get the whole word 
                     //counter <- counter+1 THINK WE NEED TO TAKE THIS OUT
-                    let mutable first = not (line[counter].Equals(" ")) //if the cur char is not a space " "
+                    let mutable first = not (line[counter].Equals("")) //if the cur char is not a space " "
                     let mutable second = not (List.exists(fun x -> x = line[counter]) symbols) //if the cur char is not a symbol
                     while( first && second) do    //keep adding to the token if the cur_char is a letter or number or _
                         token <- token + Convert.ToString(line[counter])
                         printfn "%A" token
                         counter <- counter+1
-                        first <-not (line[counter].Equals(" ")) //if the cur char is not a space " "
+                        let c = line[counter]
+                        first <-not (line[counter].Equals(Convert.ToChar(32))) //if the cur char is not a space " "
                         second <- not (List.exists(fun x -> x = line[counter]) symbols) //if the cur char is not a symbol
 
                 else if List.exists (fun elem -> elem = line[counter]) nums then //if the first char is a number
                     //let mutable first = true
-                    while(not (line[counter].Equals(" "))) do //if cur_char is not a space " ", keep adding to the token until the cur_char is not a number
+                    while(not (line[counter].Equals(" ")) && (not (List.exists(fun x -> x = line[counter]) symbols))) do //if cur_char is not a space " ", keep adding to the token until the cur_char is not a number
                         integer_const <- integer_const + Convert.ToString(line[counter])
                         token <- "integerConst"
                         counter <- counter+1 
@@ -109,16 +118,16 @@ let tokenize (line:string, streamWriter:StreamWriter) =
                     counter <- counter+1
 
                 //GETS INTO INFINITE LOOP HERE BECAUSE COUNTER ISN'T INCREMENTED FOR SOME REASON???????
-                else if line[counter].Equals("\"") then //if the first char is a quote then collect the whole string in the quote
+                else if line[counter].Equals(Convert.ToChar(34)) then //if the first char is a quote then collect the whole string in the quote
                     counter <- counter + 1
-                    while(not (line[counter].Equals("\""))) do
+                    while(not (line[counter].Equals(Convert.ToChar(34)))) do
                         string_const <- string_const + Convert.ToString(line[counter])
                         token <- "stringConst"
                         counter <- counter+1 
+                    counter <- counter+1
                 printfn "in while loop: counter is %d, and length is %d" counter line.Length
                 printfn "FINISHED TOKEN %A" token
-        
-                
+
                    
 
                 match token with 
