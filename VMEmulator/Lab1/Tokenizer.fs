@@ -68,10 +68,13 @@ let handleStringConst(token:string, streamWriter:StreamWriter) =
 
 
 let handleIdentifier(token:string, streamWriter:StreamWriter) =
-    //printfn "in identifier"
+    printfn "in identifier"
     streamWriter.WriteLine("<identifier> "+token+" </identifier>")
 
 let tokenize (line:string, streamWriter:StreamWriter) =
+        printfn "%A" line
+        printfn "%b" (line.Equals(""))
+        printfn "%b" (not (line.Equals("")))
         if (not (line.Equals(""))) then
             printfn "current line= %A" line
             let mutable token = ""
@@ -84,18 +87,26 @@ let tokenize (line:string, streamWriter:StreamWriter) =
                 printfn "TOKEN IN WHILE %A" token
                 if List.exists (fun elem -> elem = line[counter]) chars then  //if the first char is a letter then its a keyword or identifier and get the whole word 
                     //counter <- counter+1 THINK WE NEED TO TAKE THIS OUT
-                    let first = not (line[counter].Equals(" ")) //if the cur char is not a space " "
-                    let second = List.exists(line[counter].Equals) symbols //if the cur char is not a symbol
+                    let mutable first = not (line[counter].Equals(" ")) //if the cur char is not a space " "
+                    let mutable second = not (List.exists(fun x -> x = line[counter]) symbols) //if the cur char is not a symbol
                     while( first && second) do    //keep adding to the token if the cur_char is a letter or number or _
                         token <- token + Convert.ToString(line[counter])
+                        printfn "%A" token
                         counter <- counter+1
+                        first <-not (line[counter].Equals(" ")) //if the cur char is not a space " "
+                        second <- not (List.exists(fun x -> x = line[counter]) symbols) //if the cur char is not a symbol
 
                 else if List.exists (fun elem -> elem = line[counter]) nums then //if the first char is a number
-                    let first = not (line[counter].Equals(" ")) //if cur_char is not a space " "
-                    while(first) do //keep adding to the token until the cur_char is not a number
+                    //let mutable first = true
+                    while(not (line[counter].Equals(" "))) do //if cur_char is not a space " ", keep adding to the token until the cur_char is not a number
                         integer_const <- integer_const + Convert.ToString(line[counter])
                         token <- "integerConst"
                         counter <- counter+1 
+                        //first <- not (line[counter].Equals(" ")) //if cur_char is not a space " "
+                
+                else if (List.exists(fun x -> x = line[counter]) symbols) then
+                    token <- Convert.ToString(line[counter])
+                    counter <- counter+1
 
                 //GETS INTO INFINITE LOOP HERE BECAUSE COUNTER ISN'T INCREMENTED FOR SOME REASON???????
                 else if line[counter].Equals("\"") then //if the first char is a quote then collect the whole string in the quote
@@ -104,9 +115,12 @@ let tokenize (line:string, streamWriter:StreamWriter) =
                         string_const <- string_const + Convert.ToString(line[counter])
                         token <- "stringConst"
                         counter <- counter+1 
-                printfn "in while loop: counter is %d, and length is %d" counter, line.Length
+                printfn "in while loop: counter is %d, and length is %d" counter line.Length
                 printfn "FINISHED TOKEN %A" token
         
+                
+                   
+
                 match token with 
                 | "class" | "constructor" | "function" | "method" | "field" | "static" | "var" | "int" 
                 | "char" | "boolean" | "void" | "true" | "false" | "null" | "this" 
@@ -200,6 +214,7 @@ let read_jack_file(file_name:string) =
     //let new_file = File.WriteAllLines((path + "\\Test\\new"+just_name+".txt"), no_whiteSpace)
     printfn "The jack file is" 
     streamWriter.WriteLine("<tokens>")
+    printfn "%A" no_whiteSpace
     no_whiteSpace |> Seq.iter (fun item -> tokenize (item, streamWriter))
     streamWriter.WriteLine("</tokens>")
 
