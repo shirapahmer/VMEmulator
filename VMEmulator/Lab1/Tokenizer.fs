@@ -90,7 +90,7 @@ let tokenize (line:string, streamWriter:StreamWriter) =
 
             while(counter <line.Length) do //iterate through each character in the line
                 printfn "TOKEN IN WHILE %A" token
-                if line[counter].Equals(Convert.ToChar(32)) then
+                while line[counter].Equals(Convert.ToChar(32)) do
                     counter <- counter+1
 
                 if List.exists (fun elem -> elem = line[counter]) chars then  //if the first char is a letter then its a keyword or identifier and get the whole word 
@@ -141,8 +141,20 @@ let tokenize (line:string, streamWriter:StreamWriter) =
                 | _ -> handleIdentifier(token,streamWriter)
 
                 token <- ""
+                string_const <- ""
+                integer_const <- ""
         
-        
+let parseTokens(item:String, streamWriter1:StreamWriter) =  
+    let tab = "  "
+    streamWriter1.WriteLine("<class>")
+    let words = item.Split(" ")
+    match words[0] with
+    | "<keyword>" -> handleKeywordToken(item, streamWriter1, 1)
+    | "<symbol>" -> handleSymbolToken(item, streamWriter1, 1)
+    | "<integerConstant>" -> handleIntegerConstToken(item, streamWriter1, 1)
+    | "<StringConstant>" -> handleStringConstToken(item, streamWriter1, 1)
+    |"<identifier>" -> handleIdentifierToken(item, streamWriter1, 1)
+    streamWriter1.WriteLine("</class>")
         
         
         (*
@@ -226,9 +238,15 @@ let read_jack_file(file_name:string) =
     printfn "%A" no_whiteSpace
     no_whiteSpace |> Seq.iter (fun item -> tokenize (item, streamWriter))
     streamWriter.WriteLine("</tokens>")
+    let file_path2 = file_path + ".xml"
+    let streamWriter1 = new StreamWriter(file_path2)
+    let tokenized_file = File.ReadAllLines(full_path)
+    tokenized_file |> Seq.iter (fun item -> parseTokens(item, streamWriter1))
 
 
 filtered |> Array.map(fun name -> read_jack_file name)
+
+
 
 
 
