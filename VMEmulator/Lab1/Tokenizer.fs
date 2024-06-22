@@ -23,7 +23,7 @@ let filtered = vm_files |> Array.filter(String.IsNullOrEmpty >> not) //.jack fil
 let chars = ['a';'b';'c';'d';'e';'f';'g';'h';'i';'j';'k';'l';'m';'n';'o';'p';'q';'r';'s';'t';'u';'v';'w';'x';'y';'z';'A';'B';'C';'D';'E';'F';'G';'H';'I';'J';'K';'L';'M';'N';'O';'P';'Q';'R';'S';'T';'U';'V';'W';'X';'Y';'Z']
 let nums = ['0';'1';'2';'3';'4';'5';'6';'7';'8';'9']
 let symbols = ['{';'}';'(';')';'~';'[';']';'+';'-';'*';',';';';'/';'<';'>';'=';'&';'|';'.']
-let term = ["+"; "-"; "*"; "/"; "&"; "|"; "<";">";"="]
+let term = ["+"; "-"; "*"; "/"; "&amp;"; "|"; "&lt;";"&gt;";"="]
 let mutable index = 0
 let tab = "  "
 
@@ -228,15 +228,20 @@ let rec handleTerm(tokenized_file:Array, streamWriter:StreamWriter, indents:int)
         index <- index+1
         handleTerm(tokenized_file, streamWriter, indents+1)
     else 
-        streamWriter.WriteLine(spaces + tokenized_file.GetValue(index).ToString())
-        index <- index+1
-        let line = tokenized_file.GetValue(index).ToString().Split(" ")
-        if line[1].Equals("[") then
+        let next_line = tokenized_file.GetValue(index+1).ToString().Split(" ")
+        if next_line[1].Equals(".") then
+            handleSubroutineCall(tokenized_file, streamWriter,indents)
+        else 
             streamWriter.WriteLine(spaces + tokenized_file.GetValue(index).ToString())
             index <- index+1
-            handleExpression(tokenized_file, streamWriter, indents+1)
-            streamWriter.WriteLine(spaces + tokenized_file.GetValue(index).ToString())
-            index <- index+1
+            let line = tokenized_file.GetValue(index).ToString().Split(" ")
+            if line[1].Equals("[") then
+                streamWriter.WriteLine(spaces + tokenized_file.GetValue(index).ToString())
+                index <- index+1
+                handleExpression(tokenized_file, streamWriter, indents+1)
+                streamWriter.WriteLine(spaces + tokenized_file.GetValue(index).ToString())
+                index <- index+1
+
         
     streamWriter.WriteLine(String.replicate (indents-1) tab + "</term>")
 
@@ -248,19 +253,20 @@ and handleExpression(tokenized_file:Array, streamWriter:StreamWriter, indents:in
 
     handleTerm(tokenized_file, streamWriter, indents+1)
 
-    let line = tokenized_file.GetValue(index).ToString().Split(" ")
+    let mutable line = tokenized_file.GetValue(index).ToString().Split(" ")
     let mutable i = true
     while i do
         if List.exists(fun x -> x = line[1]) term then
             streamWriter.WriteLine(spaces + tokenized_file.GetValue(index).ToString())
             index <- index+1
             handleTerm(tokenized_file, streamWriter, indents+1)
+            line <- tokenized_file.GetValue(index).ToString().Split(" ")
         else
             i <- false
     
     streamWriter.WriteLine(String.replicate (indents-1) tab + "</expression>")
 
-let handleExpressionList(tokenized_file:Array, streamWriter:StreamWriter, indents:int)=
+and handleExpressionList(tokenized_file:Array, streamWriter:StreamWriter, indents:int)=
     printfn "made it to handleExpressionList"
 
     let spaces = String.replicate indents tab
@@ -281,7 +287,7 @@ let handleExpressionList(tokenized_file:Array, streamWriter:StreamWriter, indent
 
     streamWriter.WriteLine((String.replicate (indents-1) tab) + "</expressionList>")
 
-let handleSubroutineCall(tokenized_file:Array, streamWriter:StreamWriter, indents:int)=
+and handleSubroutineCall(tokenized_file:Array, streamWriter:StreamWriter, indents:int)=
     printfn "made it to subroutineCall"
 
     let spaces = String.replicate indents tab
