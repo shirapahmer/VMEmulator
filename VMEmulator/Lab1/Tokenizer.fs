@@ -80,7 +80,7 @@ let tokenize (line:string, streamWriter:StreamWriter) =
 
             while(counter <line.Length) do //iterate through each character in the line
                 printfn "TOKEN IN WHILE %A" token
-                while line[counter].Equals(Convert.ToChar(32)) do
+                while line[counter].Equals(Convert.ToChar(32)) do 
                     counter <- counter+1
 
                 if List.exists (fun elem -> elem = line[counter]) chars then  //if the first char is a letter then its a keyword or identifier and get the whole word 
@@ -96,18 +96,15 @@ let tokenize (line:string, streamWriter:StreamWriter) =
                         second <- not (List.exists(fun x -> x = line[counter]) symbols) //if the cur char is not a symbol
 
                 else if List.exists (fun elem -> elem = line[counter]) nums then //if the first char is a number
-                    //let mutable first = true
                     while(not (line[counter].Equals(" ")) && (not (List.exists(fun x -> x = line[counter]) symbols))) do //if cur_char is not a space " ", keep adding to the token until the cur_char is not a number
                         integer_const <- integer_const + Convert.ToString(line[counter])
                         token <- "integerConst"
                         counter <- counter+1 
-                        //first <- not (line[counter].Equals(" ")) //if cur_char is not a space " "
                 
                 else if (List.exists(fun x -> x = line[counter]) symbols) then
                     token <- Convert.ToString(line[counter])
                     counter <- counter+1
 
-                //GETS INTO INFINITE LOOP HERE BECAUSE COUNTER ISN'T INCREMENTED FOR SOME REASON???????
                 else if line[counter].Equals(Convert.ToChar(34)) then //if the first char is a quote then collect the whole string in the quote
                     counter <- counter + 1
                     while(not (line[counter].Equals(Convert.ToChar(34)))) do
@@ -522,12 +519,7 @@ let parseTokens(tokenized_file:Array, streamWriter1:StreamWriter) =
 
     match words[0] with
     | "<keyword>" -> handleKeywordToken(tokenized_file, streamWriter1, 1)
-    //| "<symbol>" -> handleSymbolToken(tokenized_file, streamWriter1, 1)
-    //| "<integerConstant>" -> handleIntegerConstToken(tokenized_file, streamWriter1, 1)
-    //| "<StringConstant>" -> handleStringConstToken(tokenized_file, streamWriter1, 1)
-    //|"<identifier>" -> handleIdentifierToken(tokenized_file, streamWriter1, 1)
     | _ -> ()
-   // streamWriter1.WriteLine("</class>")
 
 
 let removeLeadingWhitespace input: string =
@@ -560,10 +552,10 @@ let read_jack_file(file_name:string) =
     let cleaned_files = words|> Seq.filter (regComment.IsMatch >> not) |> Seq.choose clean_midline_comments
 
     let no_whiteSpace = cleaned_files|> Seq.map(fun clean -> Parser.removeLeadingWhitespace clean)
-    //let new_file = File.WriteAllLines((path + "\\Test\\new"+just_name+".txt"), no_whiteSpace)
     printfn "The jack file is" 
     printfn "%A" no_whiteSpace
-    no_whiteSpace |> Seq.iter (fun item -> tokenize (item, streamWriter))
+
+    no_whiteSpace |> Seq.iter (fun item -> tokenize (item, streamWriter)) //read all jack files and translate into token file
     streamWriter.Close()
 
     let file_path2 = path + "\\Test\\"+just_name+".xml"
@@ -572,12 +564,5 @@ let read_jack_file(file_name:string) =
     parseTokens(tokenized_file, streamWriter1)
     streamWriter1.Close()
     index <- 0
-    //tokenized_file |> Seq.iter (fun item -> parseTokens(item, streamWriter1))
-
 
 filtered |> Array.map(fun name -> read_jack_file name)
-
-
-
-
-
