@@ -27,6 +27,10 @@ let term = ["+"; "-"; "*"; "/"; "&amp;"; "|"; "&lt;";"&gt;";"="]
 let mutable index = 0
 let tab = "  "
 
+let classSymbolTable = ResizeArray<string>()
+let methodSymbolTable = ResizeArray<string>()
+
+
 
 let handleClass(line:string, streamWriter:StreamWriter)=
     let words = line.Split(" ")
@@ -131,182 +135,285 @@ let tokenize (line:string, streamWriter:StreamWriter) =
                 string_const <- ""
                 integer_const <- ""
 
+let addToSymbolTable(tokenized_file:Array, className:string) = 
+    let mutable symbol_string = "" 
+    let mutable numOfVars = 0
+    let line= tokenized_file.GetValue(index).ToString()
+    if(line[1].Equals("static")) then //if there are any static variables 
+        index <- index+1
+        let typeOf = tokenized_file.GetValue(index).ToString()[1]  //get type of the variable
+        index <- index+1
+        let mutable name = tokenized_file.GetValue(index).ToString()[1] //get  name of the variable
+        index <- index+1
+        symbol_string <- Convert.ToString(name)+","+Convert.ToString(typeOf)+",static,"+Convert.ToString(numOfVars) //create the string entry for the variable
+        classSymbolTable.Add(symbol_string) //add the new entry to the list 
+        numOfVars <- numOfVars+1 //increment index counter for vars of type static
+        let mutable i = true
+        while i do
+            let next_line = tokenized_file.GetValue(index).ToString().Split(" ")
+            if next_line[1].Equals(",") then //check if there are any more variables being declared now
+                index <- index+1
+                name <- tokenized_file.GetValue(index).ToString()[1]  //get name of next variable
+                index <- index+1
+                symbol_string <- Convert.ToString(name)+","+Convert.ToString(typeOf)+",static,"+Convert.ToString(numOfVars) //create a new entry for that variable
+                classSymbolTable.Add(symbol_string) //add the new entry to the list 
+                numOfVars <- numOfVars+1  //increment num of variables 
+            else i <- false
+
+    else if(line[1].Equals("field")) then //if there are any field variables
+        index <- index+1
+        let typeOf = tokenized_file.GetValue(index).ToString()[1] //get type of variable
+        index <- index+1 
+        let mutable name = tokenized_file.GetValue(index).ToString()[1] //get variable name
+        index <- index+1
+        symbol_string <- Convert.ToString(name)+","+Convert.ToString(typeOf)+",this,"+Convert.ToString(numOfVars) //create new entry string for this variable
+        classSymbolTable.Add(symbol_string) //add the new entry to the list 
+        numOfVars <- numOfVars+1 //increment the number of variables 
+        let mutable i = true
+        while i do
+            let next_line = tokenized_file.GetValue(index).ToString().Split(" ")
+            if next_line[1].Equals(",") then // check if there are any more variable declared
+                index <- index+1
+                name <- tokenized_file.GetValue(index).ToString()[1] //get their names
+                index <- index+1
+                symbol_string <- Convert.ToString(name)+","+Convert.ToString(typeOf)+",this"+Convert.ToString(numOfVars) //create a new entry string for them
+                classSymbolTable.Add(symbol_string) //add the new entry to the list 
+                numOfVars <- numOfVars+1 //increment num of field variables
+            else i <- false
+
+    else if(line[0].Equals("<keyword>") || line[0].Equals("<identifier>")) then //if there are any arguments
+        let typeOf =line[1] //get argument type 
+        index <- index+1 
+        let mutable name = tokenized_file.GetValue(index).ToString()[1] //get argument name
+        index <- index+1
+        symbol_string <- Convert.ToString(name)+","+Convert.ToString(typeOf)+",argument,"+Convert.ToString(numOfVars) //create new entry string for this variable
+        classSymbolTable.Add(symbol_string) //add the new entry to the list 
+        numOfVars <- numOfVars+1 //increment the number of variables 
+        let mutable i = true
+        while i do
+            let next_line = tokenized_file.GetValue(index).ToString().Split(" ")
+            if next_line[1].Equals(",") then // check if there are any more variable declared
+                index <- index+1
+                name <- tokenized_file.GetValue(index).ToString()[1] //get their names
+                index <- index+1
+                symbol_string <- Convert.ToString(name)+","+Convert.ToString(typeOf)+",argument,"+Convert.ToString(numOfVars) //create a new entry string for them
+                methodSymbolTable.Add(symbol_string) //add the new entry to the list 
+                numOfVars <- numOfVars+1 //increment num of field variables
+            else i <- false
+
+    else if(line[1].Equals("var")) then 
+         index <- index+1
+         let next_line = tokenized_file.GetValue(index).ToString().Split(" ")
+         let typeOf =line[1] //get local variable type 
+         index <- index+1 
+         let mutable name = tokenized_file.GetValue(index).ToString()[1] //get local name
+         index <- index+1
+         symbol_string <- Convert.ToString(name)+","+Convert.ToString(typeOf)+",local,"+Convert.ToString(numOfVars) //create new entry string for this variable
+         classSymbolTable.Add(symbol_string) //add the new entry to the list 
+         numOfVars <- numOfVars+1 //increment the number of local variables 
+         let mutable i = true
+         while i do
+            let next_line = tokenized_file.GetValue(index).ToString().Split(" ")
+            if next_line[1].Equals(",") then // check if there are any more variable declared
+                index <- index+1
+                name <- tokenized_file.GetValue(index).ToString()[1] //get their names
+                index <- index+1
+                symbol_string <- Convert.ToString(name)+","+Convert.ToString(typeOf)+",local,"+Convert.ToString(numOfVars) //create a new entry string for them
+                methodSymbolTable.Add(symbol_string) //add the new entry to the list 
+                numOfVars <- numOfVars+1 //increment num of field variables
+    else 
+        symbol_string <- "this,"+className+",argument,0"
+        methodSymbolTable.Add(symbol_string) //add the new entry to the list 
+
+    //NEED TO ADD else if equals argument and else if equals local
+      
 
 let handleClassVarDec(tokenized_file:Array, streamWriter: StreamWriter, indents: int) =
-    printfn "made it to classVarDec"
+    addToSymbolTable(tokenized_file, "")
+    
+let handleParamList(tokenized_file:Array)=
+    printfn "made it to ParamList"
 
-    let spaces = String.replicate indents tab
-    streamWriter.WriteLine(String.replicate (indents-1) tab + "<classVarDec>")
-    let start_index = index
-    while index < start_index+3 do
-        streamWriter.WriteLine(spaces + tokenized_file.GetValue(index).ToString())
-        index <- index+1
-    let mutable i = true
-    while i do
-        let next_line = tokenized_file.GetValue(index).ToString().Split(" ")
-        if next_line[1].Equals(",") then
-            streamWriter.WriteLine(spaces + tokenized_file.GetValue(index).ToString())
-            index <- index+1
-            streamWriter.WriteLine(spaces + tokenized_file.GetValue(index).ToString())
-            index <- index+1
-
-        else i <- false
-
-    streamWriter.WriteLine(spaces + tokenized_file.GetValue(index).ToString())
-    index <- index+1
-    streamWriter.WriteLine((String.replicate (indents-1) tab) + "</classVarDec>")
-
-let handleParamList(tokenized_file:Array, streamWriter:StreamWriter, indents:int)=
-    printfn "made it to PAramList"
-
-    let spaces = String.replicate indents tab
-    streamWriter.WriteLine(String.replicate (indents-1) tab + "<parameterList>")
+    //streamWriter.WriteLine(String.replicate (indents-1) tab + "<parameterList>")
+   // addToSymbolTable(tokenized_file) THINK THIS IS A MISTAKE DON'T NEED THIS LINE
     let line = tokenized_file.GetValue(index).ToString().Split(" ")
     if line[0].Equals("<keyword>") || line[0].Equals("<identifier>") then
-        let start_index = index
-        while index < start_index+2 do
-            streamWriter.WriteLine(spaces + tokenized_file.GetValue(index).ToString())
-            index <- index+1
+        //let start_index = index
+        //while index < start_index+2 do
+            //streamWriter.WriteLine(spaces + tokenized_file.GetValue(index).ToString())
+          //  index <- index+1
+        addToSymbolTable(tokenized_file, "")
         let mutable i = true
         while i do
             let next_line = tokenized_file.GetValue(index).ToString().Split(" ")
             if next_line[1].Equals(",") then
-                streamWriter.WriteLine(spaces + tokenized_file.GetValue(index).ToString())
-                index <- index+1
-                streamWriter.WriteLine(spaces + tokenized_file.GetValue(index).ToString())
-                index <- index+1
-                streamWriter.WriteLine(spaces + tokenized_file.GetValue(index).ToString())
-                index <- index+1
+                addToSymbolTable(tokenized_file, "")
+                //streamWriter.WriteLine(spaces + tokenized_file.GetValue(index).ToString())
+                //index <- index+1
+                //streamWriter.WriteLine(spaces + tokenized_file.GetValue(index).ToString())
+                //index <- index+1
+                //streamWriter.WriteLine(spaces + tokenized_file.GetValue(index).ToString())
+                //index <- index+1
 
             else i <- false
 
-    streamWriter.WriteLine(String.replicate (indents-1) tab + "</parameterList>")
+    //streamWriter.WriteLine(String.replicate (indents-1) tab + "</parameterList>")
 
-let handleVarDec(tokenized_file:Array, streamWriter:StreamWriter, indents:int) =
+let handleVarDec(tokenized_file:Array) =
     printfn "made it to handleVarDec"
 
-    let spaces = String.replicate indents tab
-    streamWriter.WriteLine(String.replicate (indents-1) tab + "<varDec>")
-    let start_index = index
-    while index < start_index+3 do
-        streamWriter.WriteLine(spaces + tokenized_file.GetValue(index).ToString())
-        index <- index+1
-    let mutable i = true
-    while i do
-        let next_line = tokenized_file.GetValue(index).ToString().Split(" ")
-        if next_line[1].Equals(",") then
-            streamWriter.WriteLine(spaces + tokenized_file.GetValue(index).ToString())
-            index <- index+1
-            streamWriter.WriteLine(spaces + tokenized_file.GetValue(index).ToString())
-            index <- index+1
-
-        else i <- false
-
-    streamWriter.WriteLine(spaces + tokenized_file.GetValue(index).ToString())
+    //let spaces = String.replicate indents tab
+    //streamWriter.WriteLine(String.replicate (indents-1) tab + "<varDec>")
+    //let start_index = index
+    //while index < start_index+3 do
+        //streamWriter.WriteLine(spaces + tokenized_file.GetValue(index).ToString())
     index <- index+1
-    streamWriter.WriteLine((String.replicate (indents-1) tab) + "</varDec>")
+    addToSymbolTable(tokenized_file, "")
+    //let mutable i = true
+    //while i do
+    //    let next_line = tokenized_file.GetValue(index).ToString().Split(" ")
+    //    if next_line[1].Equals(",") then
+    //        //streamWriter.WriteLine(spaces + tokenized_file.GetValue(index).ToString())
+    //        index <- index+1
+    //        addToSymbolTable(tokenized_file, "")
+    //        //streamWriter.WriteLine(spaces + tokenized_file.GetValue(index).ToString())
+    //        //index <- index+1 //NOT SURE IF WE NEED THIS
+
+    //    else i <- false
+
+    //streamWriter.WriteLine(spaces + tokenized_file.GetValue(index).ToString())
+    //index <- index+1
+    //streamWriter.WriteLine((String.replicate (indents-1) tab) + "</varDec>")
    
-let rec handleTerm(tokenized_file:Array, streamWriter:StreamWriter, indents:int)=
+let printOp(tokenized_file:Array, streamWriter:StreamWriter)=
+    let line = tokenized_file.GetValue(index).ToString().Split(" ")  //ERROR HERE
+    //let term = ["+"; "-"; "*"; "/"; "&amp;"; "|"; "&lt;";"&gt;";"="]
+    
+    match line[1] with
+    | "+" -> streamWriter.WriteLine("add")
+    | "-" -> streamWriter.WriteLine("sub")
+    | "=" -> streamWriter.WriteLine("eq")
+    | "&gt" -> streamWriter.WriteLine("gt")
+    | "&lt" -> streamWriter.WriteLine("lt")
+    | "|" -> streamWriter.WriteLine("or")
+    | "&amp" -> streamWriter.WriteLine("and")
+
+let printUnaryOp(tokenized_file: Array, streamWriter: StreamWriter) = 
+    let line = tokenized_file.GetValue(index).ToString().Split(" ")  //ERROR HERE
+
+    match line[1] with
+    | "-" -> streamWriter.WriteLine("neg")
+    | "~" -> streamWriter.WriteLine("not")
+   
+let rec handleTerm(tokenized_file:Array, streamWriter:StreamWriter)=
     printfn "made it to hadleTerm"
 
-    let spaces = String.replicate indents tab
-    streamWriter.WriteLine(String.replicate (indents-1) tab + "<term>")
+    //let spaces = String.replicate indents tab
+    //streamWriter.WriteLine(String.replicate (indents-1) tab + "<term>")
 
-    let line = tokenized_file.GetValue(index).ToString().Split(" ")  //ERROR HERE
-    if line[1].Equals("(") then
-        streamWriter.WriteLine(spaces + tokenized_file.GetValue(index).ToString())
+    let line = tokenized_file.GetValue(index).ToString().Split(" ")
+    //Term = (expression)
+    if line[1].Equals("(") then 
+        //streamWriter.WriteLine(spaces + tokenized_file.GetValue(index).ToString())
         index <- index+1
-        handleExpression(tokenized_file, streamWriter, indents+1)
-        streamWriter.WriteLine(spaces + tokenized_file.GetValue(index).ToString())
+        handleExpression(tokenized_file, streamWriter)
+        //streamWriter.WriteLine(spaces + tokenized_file.GetValue(index).ToString())
         index <- index+1
-
+    //term = - or ~ 
     else if line[1].Equals("~") || line[1].Equals("-") then
-        streamWriter.WriteLine(spaces + tokenized_file.GetValue(index).ToString())
-        index <- index+1
-        handleTerm(tokenized_file, streamWriter, indents+1)
+        printUnaryOp(tokenized_file, streamWriter)
+        handleTerm(tokenized_file, streamWriter)
     else
+        //term = subroutineCall
         let next_line = tokenized_file.GetValue(index+1).ToString().Split(" ")
-        if next_line[1].Equals(".") then
-            handleSubroutineCall(tokenized_file, streamWriter,indents)
-        else
-            streamWriter.WriteLine(spaces + tokenized_file.GetValue(index).ToString())
-            index <- index+1
-            let line = tokenized_file.GetValue(index).ToString().Split(" ")
-            if line[1].Equals("[") then
-                streamWriter.WriteLine(spaces + tokenized_file.GetValue(index).ToString())
+        if next_line[1].Equals(".") || line[1].Equals("(") then
+            handleSubroutineCall(tokenized_file, streamWriter)
+            //term = constant or variable var
+        else 
+            if line[0].Equals("<integerConstant>") || line[0].Equals("<stringConstant>") then
+                streamWriter.WriteLine("push "+ line[1])
                 index <- index+1
-                handleExpression(tokenized_file, streamWriter, indents+1)
-                streamWriter.WriteLine(spaces + tokenized_file.GetValue(index).ToString())
-                index <- index+1
+            
+            else if line[0].Equals("<identifier") then
+                if List.exists(fun x -> x.Split(",")[0] = line[1]) methodSymbolTable then
+                    printMethodEntry(line)
+                else if List.exists(fun x -> x.Split(",")[0] = line[1]) classSymbolTable then
+                    printClassEntry(line)
+
+
+            //let line = tokenized_file.GetValue(index).ToString().Split(" ")
+            /////////////////////////////////////////////////////////////////DONT KNOW WHAT TO DO HERE- SLIDES DON'T INCLUDE THIS CASE
+            //if line[1].Equals("[") then
+            //    //streamWriter.WriteLine(spaces + tokenized_file.GetValue(index).ToString())
+            //    index <- index+1
+            //    handleExpression(tokenized_file, streamWriter, indents+1)
+            //    //streamWriter.WriteLine(spaces + tokenized_file.GetValue(index).ToString())
+            //    index <- index+1
 
        
-    streamWriter.WriteLine(String.replicate (indents-1) tab + "</term>")
-
-and handleExpression(tokenized_file:Array, streamWriter:StreamWriter, indents:int)=
+and handleExpression(tokenized_file:Array, streamWriter:StreamWriter)=
     printfn "made it to handleExpression"
+    //let spaces = String.replicate indents tab
+    //streamWriter.WriteLine(String.replicate (indents-1) tab + "<expression>")
 
-    let spaces = String.replicate indents tab
-    streamWriter.WriteLine(String.replicate (indents-1) tab + "<expression>")
-
-    handleTerm(tokenized_file, streamWriter, indents+1)
+    handleTerm(tokenized_file, streamWriter)
 
     let mutable line = tokenized_file.GetValue(index).ToString().Split(" ")
     let mutable i = true
     while i do
         if List.exists(fun x -> x = line[1]) term then
-            streamWriter.WriteLine(spaces + tokenized_file.GetValue(index).ToString())
+            //streamWriter.WriteLine(spaces + tokenized_file.GetValue(index).ToString())
             index <- index+1
-            handleTerm(tokenized_file, streamWriter, indents+1)
+            handleTerm(tokenized_file, streamWriter)  
+            printOp(tokenized_file, streamWriter) //print the op after both left and right expressions
+            //print op
             line <- tokenized_file.GetValue(index).ToString().Split(" ")
         else
             i <- false
    
-    streamWriter.WriteLine(String.replicate (indents-1) tab + "</expression>")
-
-and handleExpressionList(tokenized_file:Array, streamWriter:StreamWriter, indents:int)=
+    //streamWriter.WriteLine(String.replicate (indents-1) tab + "</expression>")
+    
+and handleExpressionList(tokenized_file:Array, streamWriter:StreamWriter, subroutineName: string)=
     printfn "made it to handleExpressionList"
 
-    let spaces = String.replicate indents tab
-    streamWriter.WriteLine(String.replicate (indents-1) tab + "<expressionList>")
     let line = tokenized_file.GetValue(index).ToString().Split(" ")
-   
+    let mutable numExprs = 0
     if not (line[1].Equals(")")) then
-        handleExpression(tokenized_file, streamWriter, indents+1)
+        handleExpression(tokenized_file, streamWriter)
+        numExprs <- numExprs+1
         let mutable i = true
         while i do
             let next_line = tokenized_file.GetValue(index).ToString().Split(" ")
             if next_line[1].Equals(",") then
-                streamWriter.WriteLine(spaces + tokenized_file.GetValue(index).ToString())
                 index <- index+1
-                handleExpression(tokenized_file, streamWriter, indents+1)
-
+                handleExpression(tokenized_file, streamWriter)
+                numExprs <- numExprs+1
             else i <- false
+    streamWriter.WriteLine("call "+subroutineName+" "+Convert.ToString(numExprs)) //print function call to file
 
-    streamWriter.WriteLine((String.replicate (indents-1) tab) + "</expressionList>")
-
-and handleSubroutineCall(tokenized_file:Array, streamWriter:StreamWriter, indents:int)=
+and handleSubroutineCall(tokenized_file:Array, streamWriter:StreamWriter)=
     printfn "made it to subroutineCall"
 
-    let spaces = String.replicate indents tab
-    streamWriter.WriteLine(spaces + tokenized_file.GetValue(index).ToString())
+    //let spaces = String.replicate indents tab
+    //streamWriter.WriteLine(spaces + tokenized_file.GetValue(index).ToString())
+    let subroutineName = tokenized_file.GetValue(index).ToString().Split(" ")
     index <- index+1
     let line = tokenized_file.GetValue(index).ToString().Split(" ")
     if line[1].Equals("(") then
-        streamWriter.WriteLine(spaces + tokenized_file.GetValue(index).ToString())
         index <- index+1
-        handleExpressionList(tokenized_file, streamWriter, indents+1)
-        streamWriter.WriteLine(spaces + tokenized_file.GetValue(index).ToString())
+        handleExpressionList(tokenized_file, streamWriter, Convert.ToString(subroutineName))
         index <- index+1
-    else if line[1].Equals(".") then
-        let start_index = index
-        while index < start_index+3 do
-            streamWriter.WriteLine(spaces + tokenized_file.GetValue(index).ToString())
-            index <- index+1
-        handleExpressionList(tokenized_file, streamWriter, indents+1)
-        streamWriter.WriteLine(spaces + tokenized_file.GetValue(index).ToString())
-        index <- index+1
+        //THEY DIDN'T TELL US WHAT TO DO WITH THIS CASE SO WE DON'T KKNOW WHAT TO DO
+    //else if line[1].Equals(".") then
+    //    let start_index = index
+    //    while index < start_index+3 do
+    //        streamWriter.WriteLine(spaces + tokenized_file.GetValue(index).ToString())
+    //        index <- index+1
+    //    handleExpressionList(tokenized_file, streamWriter, indents+1)
+    //    streamWriter.WriteLine(spaces + tokenized_file.GetValue(index).ToString())
+    //    index <- index+1
 
-let rec handleStatements(tokenized_file:Array, streamWriter:StreamWriter, indents:int) =
+let rec handleStatements(tokenized_file:Array) =
     printfn "made it to handleStatements"
 
     let spaces = String.replicate indents tab
@@ -433,56 +540,61 @@ and handleReturn(tokenized_file:Array, streamWriter:StreamWriter, indents:int)=
     index <- index+1
     streamWriter.WriteLine(String.replicate (indents-1) tab + "</returnStatement>")
 
-let handleSubroutineBody(tokenized_file:Array, streamWriter:StreamWriter,indents:int) =
+let handleSubroutineBody(tokenized_file:Array) =
     printfn "made it to subroutineBody token"
 
-    let spaces = String.replicate indents tab
-    streamWriter.WriteLine(String.replicate (indents-1) tab + "<subroutineBody>")
-    streamWriter.WriteLine(spaces + tokenized_file.GetValue(index).ToString())
+    //let spaces = String.replicate indents tab
+    //streamWriter.WriteLine(String.replicate (indents-1) tab + "<subroutineBody>")
+    //streamWriter.WriteLine(spaces + tokenized_file.GetValue(index).ToString())
     index <- index+1
     let mutable i = true
     while i do
         let next_line = tokenized_file.GetValue(index).ToString().Split(" ")
         if next_line[1].Equals("var") then
-            handleVarDec(tokenized_file,streamWriter,indents+1)
+            handleVarDec(tokenized_file)
            // index <- index+1
         else i <- false
 
-    handleStatements(tokenized_file, streamWriter, indents+1)
-    streamWriter.WriteLine(spaces + tokenized_file.GetValue(index).ToString())
+    handleStatements(tokenized_file)
+    //streamWriter.WriteLine(spaces + tokenized_file.GetValue(index).ToString())
     index <- index+1
-    streamWriter.WriteLine(String.replicate (indents-1) tab + "</subroutineBody>")
+    //streamWriter.WriteLine(String.replicate (indents-1) tab + "</subroutineBody>")
 
 
-let handleSubroutineDec(tokenized_file:Array, streamWriter:StreamWriter, indents:int)=
+let handleSubroutineDec(tokenized_file:Array, className: string)=
     printfn "made it to subroutineDec token"
-
-    let spaces = String.replicate indents tab
-    streamWriter.WriteLine(String.replicate (indents-1) tab + "<subroutineDec>")
+    let line = tokenized_file.GetValue(index).ToString().Split(" ")
+    if line[1].Equals("method") then   
+        addToSymbolTable(tokenized_file, className) //only do if it's a method not function or constructor
+    //let spaces = String.replicate indents tab
+    //streamWriter.WriteLine(String.replicate (indents-1) tab + "<subroutineDec>")
     let start_index = index
     while index < start_index+4 do
-        streamWriter.WriteLine(spaces + tokenized_file.GetValue(index).ToString())
+        //streamWriter.WriteLine(spaces + tokenized_file.GetValue(index).ToString())
         index <- index+1
-    handleParamList(tokenized_file, streamWriter,indents+1)
-    streamWriter.WriteLine(spaces + tokenized_file.GetValue(index).ToString())
+    handleParamList(tokenized_file)
+    //streamWriter.WriteLine(spaces + tokenized_file.GetValue(index).ToString())
     index <- index+1
-    handleSubroutineBody(tokenized_file, streamWriter, indents+1)
-    streamWriter.WriteLine(String.replicate (indents-1) tab + "</subroutineDec>")
+    handleSubroutineBody(tokenized_file)
+    //streamWriter.WriteLine(String.replicate (indents-1) tab + "</subroutineDec>")
 
 
 let handleClassToken(tokenized_file:Array, streamWriter:StreamWriter, indents:int) =
     printfn "made it to class token"
     let spaces = String.replicate indents tab
-    streamWriter.WriteLine(String.replicate (indents-1) tab + "<class>")
+   // streamWriter.WriteLine(String.replicate (indents-1) tab + "<class>")
+    index <- index+1
+    let className = tokenized_file.GetValue(index).ToString().Split(" ")[1] //get the class name to use for potential future methodSymbolTables 
     let start_index = index
-    while index < start_index+3 do
-        streamWriter.WriteLine(spaces + tokenized_file.GetValue(index).ToString())
+    while index < start_index+2 do
+        //streamWriter.WriteLine(spaces + tokenized_file.GetValue(index).ToString())
         index <- index+1
 
     let mutable i = true
     while i do
         let next_line = tokenized_file.GetValue(index).ToString().Split(" ")
         if next_line[1].Equals("static") || next_line[1].Equals("field") then
+            
             handleClassVarDec(tokenized_file,streamWriter,indents+1)
        
         else i <- false
@@ -490,7 +602,7 @@ let handleClassToken(tokenized_file:Array, streamWriter:StreamWriter, indents:in
     while i do
         let next_line = tokenized_file.GetValue(index).ToString().Split(" ")
         if next_line[1].Equals("constructor") || next_line[1].Equals("method") || next_line[1].Equals("function") then
-            handleSubroutineDec(tokenized_file,streamWriter,indents+1)
+            handleSubroutineDec(tokenized_file,className)
         else i <- false
 
     streamWriter.WriteLine(spaces + tokenized_file.GetValue(index).ToString())
@@ -511,9 +623,7 @@ let handleKeywordToken(tokenized_file:Array, streamWriter:StreamWriter, indents:
     | "while" -> handleWhile(tokenized_file, streamWriter, indents)
     | "do" -> handleDo(tokenized_file, streamWriter, indents)
     | "return" -> handleReturn(tokenized_file, streamWriter, indents)
-   
-   
-       
+          
 let parseTokens(tokenized_file:Array, streamWriter1:StreamWriter) =  
     let words = tokenized_file.GetValue(index).ToString().Split(" ")
 
