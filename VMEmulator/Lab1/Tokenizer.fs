@@ -228,7 +228,7 @@ let addToSymbolTable(tokenized_file:Array, className:string) =
     //NEED TO ADD else if equals argument and else if equals local
       
 
-let handleClassVarDec(tokenized_file:Array, streamWriter: StreamWriter, indents: int) =
+let handleClassVarDec(tokenized_file:Array, streamWriter: StreamWriter) =
     addToSymbolTable(tokenized_file, "")
     
 let handleParamList(tokenized_file:Array)=
@@ -496,27 +496,17 @@ and handleIf(tokenized_file:Array, streamWriter:StreamWriter) =
     index <- index+1 //move past }
 
 
-and handleWhile(tokenized_file:Array, streamWriter:StreamWriter, indents:int) =
+and handleWhile(tokenized_file:Array, streamWriter:StreamWriter) =
     printfn "made it to while"
-
-    let spaces = String.replicate indents tab
-    streamWriter.WriteLine(String.replicate (indents-1) tab + "<whileStatement>")
-    let start_index = index
-    while index < start_index+2 do
-        streamWriter.WriteLine(spaces + tokenized_file.GetValue(index).ToString())
-        index <- index+1
-
-    handleExpression(tokenized_file, streamWriter, indents+1)
-    let start_index = index
-
-    while index < start_index+2 do
-       streamWriter.WriteLine(spaces + tokenized_file.GetValue(index).ToString())
-       index <- index+1
- 
-    handleStatements(tokenized_file, streamWriter, indents+1)
-    streamWriter.WriteLine(spaces + tokenized_file.GetValue(index).ToString())
-    index <- index+1
-    streamWriter.WriteLine(String.replicate (indents-1) tab + "</whileStatement>")
+    streamWriter.WriteLine("label L1")
+    index <- index+2
+    handleExpression(tokenized_file, streamWriter)
+    streamWriter.WriteLine("not")
+    streamWriter.WriteLine("if-goto L2")
+    index <- index+2 
+    handleStatements(tokenized_file, streamWriter)
+    streamWriter.WriteLine("goto L1")
+    streamWriter.WriteLine("label L2")
 
 and handleDo(tokenized_file:Array, streamWriter:StreamWriter, indents:int) =
     printfn "made it to do"
@@ -554,7 +544,7 @@ let handleSubroutineBody(tokenized_file:Array) =
            // index <- index+1
         else i <- false
 
-    handleStatements(tokenized_file)
+    handleStatements(tokenized_file:Array)
     //streamWriter.WriteLine(spaces + tokenized_file.GetValue(index).ToString())
     index <- index+1
     //streamWriter.WriteLine(String.replicate (indents-1) tab + "</subroutineBody>")
@@ -565,6 +555,13 @@ let handleSubroutineDec(tokenized_file:Array, className: string)=
     let line = tokenized_file.GetValue(index).ToString().Split(" ")
     if line[1].Equals("method") then   
         addToSymbolTable(tokenized_file, className) //only do if it's a method not function or constructor
+    if line[1].Equals("constructor") then
+        index <- index+2
+        let line = tokenized_file.GetValue(index).ToString().Split(" ")
+        streamWriter.WriteLine("function " + className + "." + line[1]) //how do we know what number
+        streamWriter.WriteLine("push constant ") //WHAT SHOULD NUMBER BE?
+        streamWriter.WriteLine("call Memory.alloc ") //ALSO HERE?
+        streamWriter.WriteLine("pop pointer 0")
     //let spaces = String.replicate indents tab
     //streamWriter.WriteLine(String.replicate (indents-1) tab + "<subroutineDec>")
     let start_index = index
@@ -594,7 +591,7 @@ let handleClassToken(tokenized_file:Array, streamWriter:StreamWriter, indents:in
         let next_line = tokenized_file.GetValue(index).ToString().Split(" ")
         if next_line[1].Equals("static") || next_line[1].Equals("field") then
             
-            handleClassVarDec(tokenized_file,streamWriter,indents+1)
+            handleClassVarDec(tokenized_file,streamWriter)
        
         else i <- false
     i <- true
