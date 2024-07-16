@@ -402,6 +402,7 @@ let rec handleTerm(tokenized_file:Array, streamWriter:StreamWriter, className:st
                     handleExpression(tokenized_file, streamWriter, className)
                     streamWriter.WriteLine("add") //add the expression value index to base index of varName array
                     streamWriter.WriteLine("pop pointer 1") //put memory location into THAT 
+                    streamWriter.WriteLine("push that 0") //add THAT memory to the stack
                     index <- index+1 //move past ]
 
        
@@ -416,7 +417,6 @@ and handleExpression(tokenized_file:Array, streamWriter:StreamWriter, className:
     while i do
         if List.exists(fun x -> x = line[1]) term then
         
-            //streamWriter.WriteLine(spaces + tokenized_file.GetValue(index).ToString())
             index <- index+1 //move past op
             handleTerm(tokenized_file, streamWriter, className)  
             printOp(line, streamWriter) //print the op after both left and right expressions
@@ -424,9 +424,7 @@ and handleExpression(tokenized_file:Array, streamWriter:StreamWriter, className:
             line <- tokenized_file.GetValue(index).ToString().Split(" ")
         else
             i <- false
-   
-    //streamWriter.WriteLine(String.replicate (indents-1) tab + "</expression>")
-    
+       
 and handleExpressionList(tokenized_file:Array, streamWriter:StreamWriter, subroutineName: string,className:string, flag:string)=
     printfn "made it to handleExpressionList"
 
@@ -510,24 +508,28 @@ and handleLet(tokenized_file:Array, streamWriter:StreamWriter, className:string)
         streamWriter.WriteLine("add")  //add the variable and index to get correct mem location
         let lookahead = tokenized_file.GetValue(index+1).ToString().Split(" ") 
         let line = tokenized_file.GetValue(index).ToString().Split(" ")
-        if lookahead[1].Equals("[") then  //check if expression is a[i] = b[j]
-            let entry1 = findEntry(line[1])
-            printMethodEntry(entry1, streamWriter) //push b
-            index <- index+2
-            handleExpression(tokenized_file, streamWriter, className) //push j
-            streamWriter.WriteLine("add")
-            streamWriter.WriteLine("pop pointer 1")
-            streamWriter.WriteLine("push that 0")
-            streamWriter.WriteLine("pop temp 0")
-            streamWriter.WriteLine("pop pointer 1")
-            streamWriter.WriteLine("push temp 0")
-            streamWriter.WriteLine("pop that 0")
-            index <- index+1 //move past ;
-        else
-            streamWriter.WriteLine("pop pointer 1") //save that address in THAT
-            handleExpression(tokenized_file, streamWriter, className) //calculate value of right side of =
-            streamWriter.WriteLine("pop that 0") //put that into correct array location
-            index <- index+1 //move past ; 
+
+        //if lookahead[1].Equals("[") then  //check if expression is a[i] = b[j]
+        //    let entry1 = findEntry(line[1])
+        //    printMethodEntry(entry1, streamWriter) //push b
+        //    index <- index+2
+        //    handleExpression(tokenized_file, streamWriter, className) //push j
+        //    streamWriter.WriteLine("add")
+        //    streamWriter.WriteLine("pop pointer 1")
+        //    streamWriter.WriteLine("push that 0")
+        //    streamWriter.WriteLine("pop temp 0")
+        //    streamWriter.WriteLine("pop pointer 1")
+        //    streamWriter.WriteLine("push temp 0")
+        //    streamWriter.WriteLine("pop that 0")
+        //    index <- index+1 //move past ;
+        //else
+        //streamWriter.WriteLine("pop pointer 1") //save that address in THAT
+        handleExpression(tokenized_file, streamWriter, className) //calculate value of right side of =
+        streamWriter.WriteLine("pop temp 0")
+        streamWriter.WriteLine("pop pointer 1")
+        streamWriter.WriteLine("push temp 0")
+        streamWriter.WriteLine("pop that 0")
+        index <- index+1 //move past ; 
 
     else 
         index <- index+1 //move past =
