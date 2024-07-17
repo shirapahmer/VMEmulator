@@ -730,15 +730,6 @@ let handleKeywordToken(tokenized_file:Array, streamWriter:StreamWriter) =
     match token[1] with
     | "class" -> handleClassToken(tokenized_file, streamWriter)
 
-////
-//let parseTokens(tokenized_file:Array, streamWriter1:StreamWriter) =  
-//    let words = tokenized_file.GetValue(index).ToString().Split(" ")
-
-//    match words[0] with
-//    | "<keyword>" -> handleKeywordToken(tokenized_file, streamWriter1)
-//    | _ -> ()
-
-
 let removeLeadingWhitespace input: string =
     // Regex to match leading whitespace
     let regex = Regex(@"^\s+", RegexOptions.Compiled)
